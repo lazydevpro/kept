@@ -1,0 +1,160 @@
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
+import { apiRequest } from '@/lib/api'
+
+export interface InvestableAsset {
+  name: string
+  symbol: string
+  logo: string
+  description: string
+  mint: string
+  available: boolean
+  supportsAtomicSwaps: boolean
+  provider: 'xstocks' | 'tessera'
+  instrument: 'tokenized_stock' | 'loan_participation'
+  transferFeeBps: number
+  /** Null when the asset has no quote — illiquid mints often don't. Never zero. */
+  priceUsd?: number | null
+  priceChange24h?: number | null
+}
+
+export interface TradeOrder {
+  transaction: string
+  requestId: string
+  inAmount: string
+  outAmount: string
+  inUsdValue?: number
+  outUsdValue?: number
+  priceImpact?: number
+  router: string
+  mode: 'sandbox' | 'live'
+  feeBps: number
+  expireAt?: string
+}
+
+export function useInvestableAssets() {
+  return useQuery({
+    queryKey: ['investable-assets'],
+    queryFn: () =>
+      apiRequest<{ assets: InvestableAsset[] }>(
+        '/v1/trades/assets?symbols=SPYx,QQQx,TSLAx,tOpenAI,tKalshi,tSpaceX',
+      ),
+    staleTime: 60 * 60_000,
+    retry: 1,
+  })
+}
+
+/**
+ * What the buy ticket shows above the amount field: the price, which way it has
+ * moved, and how deep the market is. Every field is nullable — an illiquid mint
+ * genuinely has no 24h volume, and a blank is honest where a zero would not be.
+ */
+export interface AssetDetail {
+  mint: string
+  symbol: string
+  name: string
+  logo: string
+  provider: 'xstocks' | 'tessera' | null
+  instrument: 'tokenized_stock' | 'loan_participation' | null
+  transferFeeBps: number
+  available: boolean
+  decimals: number | null
+  priceUsd: number | null
+  change5m: number | null
+  change1h: number | null
+  change6h: number | null
+  change24h: number | null
+  liquidityUsd: number | null
+  marketCapUsd: number | null
+  volume24hUsd: number | null
+  holders: number | null
+  verified: boolean | null
+}
+
+export function useAssetDetail(mint: string | null) {
+  return useQuery({
+    queryKey: ['asset-detail', mint],
+    queryFn: () => apiRequest<{ asset: AssetDetail }>(`/v1/trades/asset?mint=${encodeURIComponent(mint!)}`),
+    enabled: Boolean(mint),
+    // Prices move; this is the number someone is deciding on.
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+    retry: 1,
+  })
+}
+
+/** What a given amount actually buys, before any wallet is involved. */
+export interface QuotePreview {
+  amountUsdc: number
+  outAmount: string
+  decimals: number | null
+  outQuantity: number | null
+  pricePerUnit: number | null
+  priceImpactPct: number | null
+  route: string | null
+}
+
+export function useQuotePreview(mint: string | null, amountUsdc: number | null) {
+  return useQuery({
+    queryKey: ['trade-quote', mint, amountUsdc],
+    queryFn: () =>
+      apiRequest<{ quote: QuotePreview }>(
+        `/v1/trades/quote?outputMint=${encodeURIComponent(mint!)}&amountUsdc=${amountUsdc}`,
+      ),
+    enabled: Boolean(mint) && Boolean(amountUsdc) && (amountUsdc ?? 0) > 0,
+    staleTime: 15_000,
+    retry: 0,
+  })
+}
+
+export function requestTradeOrder(input: {
+  outputMint: string
+  outputSymbol: string
+  amountUsdc: number
+  taker: string
+  goalId?: string
+  tesseraAcknowledged?: boolean
+}) {
+  return apiRequest<{ order: TradeOrder }>('/v1/trades/order', { method: 'POST', body: JSON.stringify(input) })
+}
+
+export function executeTrade(input: { requestId: string; signedTransaction: string }) {
+  return apiRequest<{ result: { status: 'Success'; signature: string }; contributionId: string }>(
+    '/v1/trades/execute',
+    {
+      method: 'POST',
+      body: JSON.stringify(input),
+    },
+  )
+}
+
+/**
+ * The whole investable universe — ~930 tokenised stocks plus the private-market
+ * assets — searchable, with live prices.
+ *
+ * Needs no wallet: browsing and pricing are public reads. A wallet is only
+ * required to sign a purchase.
+ */
+export interface CatalogPage {
+  assets: InvestableAsset[]
+  total: number
+  page: number
+  hasMore: boolean
+  priced: boolean
+}
+
+/**
+ * Endless list. Pages append as you scroll rather than replacing the view, so
+ * nobody has to reach the bottom and press Next to keep reading.
+ */
+export function useAssetCatalog(query: string) {
+  return useInfiniteQuery({
+    queryKey: ['asset-catalog', query],
+    initialPageParam: 0,
+    queryFn: ({ pageParam }) =>
+      apiRequest<CatalogPage>(`/v1/trades/catalog?limit=24&page=${pageParam}&q=${encodeURIComponent(query)}`),
+    getNextPageParam: (last) => (last.hasMore ? last.page + 1 : undefined),
+    // The first call walks the upstream catalog; after that it is cached server side.
+    staleTime: 5 * 60_000,
+    retry: 1,
+  })
+}

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  KEPT widget palette — dark. Mirrors the dark half of `mobile/constants/theme.ts`.
+
+  The tracks are each ring's own hue at low luminance rather than a single grey,
+  which is what stops an empty ring reading as a dead slot.
+-->
+<resources>
+  <color name="kept_surface">#FF161A12</color>
+  <color name="kept_hairline">#FF242A1D</color>
+  <color name="kept_ink">#FFF5F7F0</color>
+  <color name="kept_ink_muted">#FFA3AC9A</color>
+  <color name="kept_kiwi_deep">#FFD2F97F</color>
+
+  <color name="kept_track_promise">#FF26380F</color>
+  <color name="kept_track_goal">#FF251B52</color>
+  <color name="kept_track_circle">#FF3E1A0D</color>
+
+  <color name="kept_ring_promise_from">#FF8FD41F</color>
+  <color name="kept_ring_promise_to">#FFD2F97F</color>
+  <color name="kept_ring_goal_from">#FF7E5CFF</color>
+  <color name="kept_ring_goal_to">#FFBCA8FF</color>
+  <color name="kept_ring_circle_from">#FFFF6B45</color>
+  <color name="kept_ring_circle_to">#FFFFB496</color>
+</resources>

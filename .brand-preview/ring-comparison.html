@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Ring implementation comparison</title>
+  <style>
+    :root { color-scheme: dark; font-family: Inter, system-ui, -apple-system, sans-serif; --background: #000; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; background: #0b0b0c; color: #f5f5f7; }
+    header { max-width: 1180px; margin: 0 auto; padding: 40px 24px 24px; }
+    header p { max-width: 720px; margin: 8px 0 0; color: #a1a1a6; line-height: 1.55; }
+    h1 { margin: 0; font-size: clamp(32px, 5vw, 58px); letter-spacing: -.05em; }
+    .comparison { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 18px; max-width: 1180px; margin: 0 auto; padding: 0 24px 50px; }
+    .panel { overflow: hidden; min-height: 560px; border: 1px solid #2b2b2f; border-radius: 24px; background: #000; }
+    .panel-title { display: flex; align-items: center; justify-content: space-between; height: 58px; padding: 0 18px; border-bottom: 1px solid #2b2b2f; background: #161618; }
+    .panel-title b { font-size: 14px; }
+    .panel-title span { color: #8e8e93; font: 11px ui-monospace, SFMono-Regular, Menlo, monospace; }
+    iframe { display: block; width: 100%; height: 500px; border: 0; background: #000; }
+    .local-stage { display: grid; place-items: center; min-height: 500px; padding: 40px 20px; }
+    .card { display: flex; align-items: center; padding: 32px 42px; border-radius: 25px; background: rgba(255,255,255,.1); box-shadow: 2px 2px 50px rgba(0,0,0,.2); }
+    .circles-container { position: relative; width: 250px; height: 250px; flex: 0 0 250px; }
+    .ring { position: absolute; top: 50%; left: 50%; border-radius: 100%; transform: translate(-50%,-50%); }
+    .ring::before { content: ""; position: absolute; inset: 0; border-radius: 100%; }
+    .ring::after { content: ""; position: absolute; top: 50%; left: 50%; width: 57px; height: 57px; border-radius: 100%; background: var(--background); transform: translate(-50%,-50%); }
+    .dot { position: absolute; z-index: 2; width: 100%; height: 100%; transform: rotate(0); }
+    .dot::after { content: ""; position: absolute; left: 50%; width: 32px; height: 32px; border-radius: 100%; background: transparent; box-shadow: 3px 0 3px rgba(0,0,0,.24); transform: translateX(-50%); }
+    .progress-ring { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); }
+    .progress-ring__circle { transform: rotate(270deg); transform-origin: 50% 50%; }
+    .activity.ring { width: 250px; height: 250px; background: rgba(246,51,122,.32); }
+    .activity.ring::before { box-shadow: 1px 0 3px rgba(246,51,122,.48); }
+    .activity.ring::after { box-shadow: inset 1px 0 3px rgba(246,51,122,.48); }
+    .exercise.ring { width: 185px; height: 185px; background: rgba(111,228,48,.32); }
+    .exercise.ring::after { box-shadow: inset 1px 0 3px rgba(111,228,48,.48); }
+    .stand.ring { width: 122px; height: 122px; background: rgba(21,194,224,.32); }
+    .stand.ring::after { box-shadow: inset 1px 0 3px rgba(21,194,224,.48); }
+    .info { margin-left: 28px; white-space: nowrap; }
+    .row { margin: 6px; font-size: 21px; font-weight: 600; }
+    .row.activity { color:#f6337a; }.row.exercise { color:#b1fd36; }.row.stand { color:#15c2e0; }
+    .figma-strip { display: flex; align-items: center; gap: 16px; max-width: 1132px; margin: -26px auto 52px; padding: 14px 18px; border: 1px solid #2b2b2f; border-radius: 18px; background: #161618; color: #a1a1a6; font-size: 13px; }
+    .figma-strip img { width: 72px; height: 72px; object-fit: contain; border-radius: 12px; background: white; }
+    .figma-strip b { display: block; margin-bottom: 4px; color: white; }
+    @media(max-width:900px){.comparison{grid-template-columns:1fr}.panel{min-height:540px}.figma-strip{margin-left:24px;margin-right:24px}.card{transform:scale(.86)}}
+    @media(max-width:520px){.card{display:block;padding:28px 20px;transform:scale(.8)}.info{margin:24px 0 0}.panel{min-height:580px}}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Match the mechanism first.</h1>
+    <p>Left is a line-for-line local rendering of the supplied CodePen mechanism. Right is the reusable port using the same dimensions, vertical gradients, 270° rotation, rounded strokes, progress math, and endpoint-shadow construction.</p>
+  </header>
+  <main class="comparison">
+    <section class="panel">
+      <div class="panel-title"><b>Exact reference port</b><span>CODEPEN SOURCE · UNTHEMED</span></div>
+      <div class="local-stage" id="reference-stage" aria-label="Exact local rendering of the supplied CodePen source"></div>
+    </section>
+    <section class="panel">
+      <div class="panel-title"><b>Local reconstruction</b><span>SAME COLORS · SAME MATH</span></div>
+      <div class="local-stage">
+        <div class="card">
+          <div class="circles-container">
+            <div class="activity ring" data-value="400" data-limit="880"><div class="dot"></div><svg class="progress-ring" width="250" height="250"><defs><linearGradient id="activity-gradient" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#f6337a"/><stop offset="100%" stop-color="#f71046"/></linearGradient></defs><circle class="progress-ring__circle" stroke="url(#activity-gradient)" stroke-width="32" stroke-linecap="round" fill="transparent" r="109" cx="125" cy="125"/></svg></div>
+            <div class="exercise ring" data-value="24" data-limit="30"><div class="dot"></div><svg class="progress-ring" width="185" height="185"><defs><linearGradient id="exercise-gradient" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#b1fd36"/><stop offset="100%" stop-color="#6fe430"/></linearGradient></defs><circle class="progress-ring__circle" stroke="url(#exercise-gradient)" stroke-width="32" stroke-linecap="round" fill="transparent" r="77" cx="92.5" cy="92.5"/></svg></div>
+            <div class="stand ring" data-value="10" data-limit="12"><div class="dot"></div><svg class="progress-ring" width="122" height="122"><defs><linearGradient id="stand-gradient" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#15c2e0"/><stop offset="100%" stop-color="#1ef8d5"/></linearGradient></defs><circle class="progress-ring__circle" stroke="url(#stand-gradient)" stroke-width="32" stroke-linecap="round" fill="transparent" r="45" cx="61" cy="61"/></svg></div>
+          </div>
+          <div class="info"><div class="row activity">400/880 KCAL</div><div class="row exercise">24/30 MIN.</div><div class="row stand">10/12 HOURS</div></div>
+        </div>
+      </div>
+    </section>
+  </main>
+  <aside class="figma-strip"><img src="figma-fitness-rings.png" alt="Exact Fitness Rings component exported from the supplied Figma file"/><div><b>Exact Figma export retained separately</b>The Figma component and the CodePen use different constructions. This comparison deliberately ports the working CodePen unchanged before any product-theme adaptation.</div></aside>
+  <script>
+    document.getElementById('reference-stage').append(document.querySelector('.local-stage .card').cloneNode(true));
+    document.querySelectorAll('.ring').forEach(ring=>{
+      const value=Number(ring.dataset.value);
+      const limit=Number(ring.dataset.limit);
+      const percent=Math.min(value/limit,1);
+      const circle=ring.querySelector('.progress-ring__circle');
+      const length=circle.getTotalLength();
+      circle.style.strokeDasharray=`${length} ${length}`;
+      circle.style.strokeDashoffset=String(length-percent*length);
+      ring.querySelector('.dot').style.transform=`rotate(${percent*360}deg)`;
+    });
+  </script>
+</body>
+</html>

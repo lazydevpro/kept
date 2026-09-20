@@ -1,0 +1,10 @@
+BETTER_AUTH_SECRET=replace-with-at-least-32-random-characters
+# Optional social login providers. Anonymous onboarding works without these.
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+APPLE_CLIENT_ID=
+APPLE_CLIENT_SECRET=
+# Optional Expo push access token.
+EXPO_ACCESS_TOKEN=
+# Required for live mainnet xStocks orders through Jupiter Swap V2.
+JUPITER_API_KEY=

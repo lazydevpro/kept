@@ -1,0 +1,60 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "neon-reserve-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-18",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": false,
+  "preview_urls": false,
+  "observability": { "enabled": true },
+  "vars": {
+    "ENVIRONMENT": "local",
+    "APP_ORIGIN": "neonreserve://",
+    "SOLANA_CLUSTER": "devnet",
+    "SOLANA_RPC_URL": "https://api.devnet.solana.com",
+    "PUBLIC_APP_URL": "http://127.0.0.1:8082",
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "neon-reserve",
+    },
+  ],
+  "durable_objects": {
+    "bindings": [{ "name": "CIRCLE_ROOMS", "class_name": "CircleRoom" }],
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["CircleRoom"] }],
+  "queues": {
+    "producers": [{ "binding": "JOBS", "queue": "neon-reserve-jobs" }],
+    "consumers": [
+      {
+        "queue": "neon-reserve-jobs",
+        "max_batch_size": 10,
+        "max_batch_timeout": 5,
+      },
+    ],
+  },
+  "triggers": { "crons": ["15 1 * * *"] },
+  "env": {
+    "staging": {
+      "name": "neon-reserve-api-staging",
+      "workers_dev": true,
+      "preview_urls": true,
+      "vars": {
+        "ENVIRONMENT": "staging",
+        "APP_ORIGIN": "https://neon-reserve-web.lazydevpro.workers.dev",
+        "PUBLIC_APP_URL": "https://neon-reserve-web.lazydevpro.workers.dev",
+        "SOLANA_CLUSTER": "devnet",
+        "SOLANA_RPC_URL": "https://api.devnet.solana.com"
+      },
+      "d1_databases": [{ "binding": "DB", "database_name": "neon-reserve-staging" }],
+      "durable_objects": {
+        "bindings": [{ "name": "CIRCLE_ROOMS", "class_name": "CircleRoom" }]
+      },
+      "queues": {
+        "producers": [{ "binding": "JOBS", "queue": "neon-reserve-jobs-staging" }],
+        "consumers": [{ "queue": "neon-reserve-jobs-staging", "max_batch_size": 10, "max_batch_timeout": 5 }]
+      }
+    }
+  }
+}

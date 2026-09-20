@@ -1,0 +1,47 @@
+# Dependencies
+node_modules/
+
+# Secrets — never commit these. `.dev.vars` holds BETTER_AUTH_SECRET and any
+# provider keys; the `.example` files are the ones meant to be read.
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p8
+*.p12
+*.jks
+*.keystore
+
+# Local Cloudflare state — the D1 sqlite with local rows, tens of megabytes
+.wrangler/
+
+# Build output
+dist/
+web-build/
+build/
+.expo/
+.kotlin/
+*.tsbuildinfo
+worker-configuration.d.ts
+
+# Generated native projects (Expo prebuild regenerates these)
+/mobile/android/
+/mobile/ios/
+
+# Android Gradle local config — machine-specific SDK paths
+local.properties
+.gradle/
+
+# Discovery-phase research and renders — kept on disk, out of the repo
+outputs/
+
+# Editor and OS
+.DS_Store
+*.orig.*
+npm-debug.*
+yarn-debug.*
+yarn-error.*

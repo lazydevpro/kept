@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Typography picker — Social Wealth</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&family=Fraunces:opsz,wght@9..144,400;9..144,600&family=IBM+Plex+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style id="palette-tokens">
+    :root { --bg:#09080f;--fg:#fdf9ff;--card:#151120;--card-fg:#fdf9ff;--primary:#ffea00;--primary-fg:#09080f;--muted:#1b1726;--muted-fg:#b5adbd;--border:#31283e;--yellow:#ffea00;--purple:#c13cff;--red:#ff174d;--radius:16px; }
+  </style>
+  <style>
+    *{box-sizing:border-box}html,body{margin:0;min-height:100%;background:var(--bg);color:var(--fg)}
+    .topbar{position:sticky;top:0;z-index:10;display:flex;align-items:center;justify-content:space-between;gap:20px;padding:18px 24px;border-bottom:1px solid var(--border);background:color-mix(in oklch,var(--bg) 88%,transparent);backdrop-filter:blur(18px);font-family:Inter,system-ui,sans-serif}
+    .topbar h1{margin:0;font-size:15px}.topbar p{margin:3px 0 0;color:var(--muted-fg);font-size:12px}.toggle{min-height:40px;padding:8px 14px;border:1px solid var(--border);border-radius:999px;background:transparent;color:inherit;font:inherit;cursor:pointer}
+    main{width:min(960px,calc(100% - 32px));margin:auto;padding:42px 0 80px}.intro{max-width:700px;margin-bottom:30px;font-family:Inter,system-ui,sans-serif}.intro span{color:var(--muted-fg);font-size:12px;font-weight:800;letter-spacing:.13em;text-transform:uppercase}.intro h2{margin:10px 0 8px;font-size:clamp(38px,6vw,64px);line-height:.98;letter-spacing:-.05em}.intro p{margin:0;color:var(--muted-fg);font-size:16px;line-height:1.55}
+    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}.pair{padding:24px;border:1px solid var(--border);border-radius:24px;background:var(--card);font-family:var(--pair-sans);overflow:hidden}.pair header{display:flex;align-items:center;gap:10px;padding-bottom:16px;border-bottom:1px solid var(--border);font-family:Inter,system-ui,sans-serif}.number{display:grid;place-items:center;width:32px;height:32px;border-radius:50%;background:var(--primary);color:var(--primary-fg);font-size:13px;font-weight:800}.pair h3{margin:0;font-size:16px}.tags{margin-left:auto;color:var(--muted-fg);font-size:10px;text-transform:uppercase;letter-spacing:.08em}.display{margin:25px 0 9px;font-family:var(--pair-display,var(--pair-sans));font-size:36px;font-weight:600;line-height:1.02;letter-spacing:-.04em}.body{margin:0;color:var(--muted-fg);font-size:14px;line-height:1.55}.sample{display:flex;align-items:end;justify-content:space-between;gap:16px;margin-top:24px;padding:16px;border-radius:15px;background:var(--muted)}.caption{margin:0 0 6px;color:var(--muted-fg);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase}.metric{margin:0;font-family:var(--pair-mono);font-size:20px;font-weight:600}.streak{color:var(--yellow)}.action{padding:10px 13px;border:0;border-radius:11px;background:var(--purple);color:#fff;font:600 12px var(--pair-sans)}.footer{margin-top:30px;padding:22px;text-align:center;color:var(--muted-fg);font:14px Inter,system-ui,sans-serif}.footer code{color:var(--fg)}
+    @media(max-width:760px){.grid{grid-template-columns:1fr}.tags{display:none}}
+  </style>
+</head>
+<body>
+  <div class="topbar"><div><h1>Typography picker — Social Wealth</h1><p>Rendered on Neon Reserve</p></div><button class="toggle" id="toggle">Switch to light</button></div>
+  <main>
+    <div class="intro"><span>Palette locked · one choice remains</span><h2>How should progress sound?</h2><p>The sample is identical in every card. Compare warmth, clarity, and how the streak number feels—not just the font names.</p></div>
+    <div class="grid" id="grid"></div>
+    <div class="footer">Pick <code>1–6</code>, or say <code>skip</code> for Inter + JetBrains Mono.</div>
+  </main>
+  <script>
+    const pairs=[
+      {name:'Space Grotesk + Space Mono',tags:'bold · distinctive',sans:"'Space Grotesk',sans-serif",mono:"'Space Mono',monospace"},
+      {name:'Plus Jakarta + JetBrains Mono',tags:'friendly · consumer',sans:"'Plus Jakarta Sans',sans-serif",mono:"'JetBrains Mono',monospace"},
+      {name:'Geist + Geist Mono',tags:'clean · modern',sans:"Geist,sans-serif",mono:"'Geist Mono',monospace"},
+      {name:'DM Sans + DM Mono',tags:'warm · humane',sans:"'DM Sans',sans-serif",mono:"'DM Mono',monospace"},
+      {name:'Fraunces + Inter',tags:'expressive · editorial',sans:"Inter,sans-serif",mono:"'IBM Plex Mono',monospace",display:"Fraunces,serif"},
+      {name:'Inter + JetBrains Mono',tags:'neutral · trusted',sans:"Inter,sans-serif",mono:"'JetBrains Mono',monospace"}
+    ];
+    document.getElementById('grid').innerHTML=pairs.map((p,i)=>`<article class="pair" style="--pair-sans:${p.sans};--pair-mono:${p.mono};${p.display?`--pair-display:${p.display};`:''}"><header><span class="number">${i+1}</span><h3>${p.name}</h3><span class="tags">${p.tags}</span></header><h2 class="display">Build wealth together.</h2><p class="body">Keep a promise to yourself. Share the progress you choose. Help your circle keep showing up.</p><div class="sample"><div><p class="caption">Current streak</p><p class="metric"><span class="streak">8</span> weeks</p></div><button class="action">Keep promise</button></div></article>`).join('');
+    const root=document.documentElement,button=document.getElementById('toggle'),tokens=document.getElementById('palette-tokens');
+    const dark=':root { --bg:#09080f;--fg:#fdf9ff;--card:#151120;--card-fg:#fdf9ff;--primary:#ffea00;--primary-fg:#09080f;--muted:#1b1726;--muted-fg:#b5adbd;--border:#31283e;--yellow:#ffea00;--purple:#c13cff;--red:#ff174d;--radius:16px; }';
+    const light=':root { --bg:#f8f5fc;--fg:#21172a;--card:#ffffff;--card-fg:#21172a;--primary:#715c00;--primary-fg:#ffffff;--muted:#eee8f4;--muted-fg:#62586a;--border:#ddd4e5;--yellow:#b38f00;--purple:#7a26aa;--red:#b3163b;--radius:16px; }';
+    button.addEventListener('click',()=>{const isLight=root.dataset.theme!=='light';root.dataset.theme=isLight?'light':'dark';tokens.textContent=isLight?light:dark;button.textContent=isLight?'Switch to dark':'Switch to light'});
+  </script>
+</body>
+</html>

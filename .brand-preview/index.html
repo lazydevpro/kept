@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>BTC gold × Solana purple × signal red — Social Wealth</title>
+  <style>
+    :root { font-family: Inter, ui-rounded, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; }
+    body { background: #0e0f0e; color: #f6f7f4; }
+    button { font: inherit; }
+    .topbar { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 18px 24px; border-bottom: 1px solid rgba(255,255,255,.1); background: rgba(14,15,14,.86); backdrop-filter: blur(18px); }
+    .topbar h1 { margin: 0; font-size: 15px; letter-spacing: -.01em; }
+    .topbar p { margin: 3px 0 0; color: #9da29a; font-size: 12px; }
+    html[data-theme="light"] .topbar { border-color: rgba(21,24,21,.12); background: rgba(238,239,236,.9); color: #151815; }
+    html[data-theme="light"] .topbar p { color: #59605a; }
+    html[data-theme="light"] .toggle { border-color: rgba(21,24,21,.24); color: #151815; }
+    html[data-theme="light"] .intro span, html[data-theme="light"] .intro p { color: #555d56; }
+    .toggle { min-height: 40px; padding: 8px 14px; border: 1px solid rgba(255,255,255,.18); border-radius: 999px; background: transparent; color: inherit; cursor: pointer; }
+    .toggle:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+    .container { width: min(1040px, calc(100% - 32px)); margin: 0 auto; padding: 38px 0 80px; }
+    .intro { max-width: 700px; margin-bottom: 38px; }
+    .intro span { color: #9da29a; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .14em; }
+    .intro h2 { margin: 11px 0 10px; font-size: clamp(38px, 6vw, 68px); line-height: .97; letter-spacing: -.055em; }
+    .intro p { margin: 0; color: #aeb2ac; font-size: 17px; line-height: 1.55; }
+    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; }
+    .palette { overflow: hidden; border: 1px solid var(--border); border-radius: 28px; background: var(--bg); color: var(--fg); box-shadow: 0 18px 50px rgba(0,0,0,.13); }
+    .palette header { display: flex; gap: 12px; align-items: center; padding: 20px 22px 14px; }
+    .number { display: grid; place-items: center; flex: 0 0 34px; height: 34px; border-radius: 50%; background: var(--primary); color: var(--primary-fg); font-size: 13px; font-weight: 900; }
+    .palette h3 { margin: 0; font-size: 19px; letter-spacing: -.025em; }
+    .vibe { margin: 2px 0 0; color: var(--muted-fg); font-size: 11px; font-weight: 750; text-transform: uppercase; letter-spacing: .09em; }
+    .swatches { display: grid; grid-template-columns: repeat(5,1fr); height: 54px; }
+    .swatches i { position: relative; }
+    .swatches small { position: absolute; inset: auto 0 4px; color: white; font: 8px ui-monospace, monospace; text-align: center; text-shadow: 0 1px 3px #000; }
+    .mock { display: grid; grid-template-columns: 1fr 158px; gap: 14px; align-items: center; padding: 22px; }
+    .eyebrow { margin: 0 0 4px; color: var(--muted-fg); font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .09em; }
+    .mock h4 { margin: 0 0 4px; font-size: 25px; line-height: 1.08; letter-spacing: -.04em; }
+    .mock-copy { margin: 0 0 17px; color: var(--muted-fg); font-size: 13px; }
+    .button-row { display: flex; gap: 8px; }
+    .btn { min-height: 40px; padding: 8px 13px; border-radius: 13px; border: 1px solid var(--border); cursor: pointer; }
+    .btn-primary { border-color: var(--primary); background: linear-gradient(135deg, color-mix(in oklch, var(--primary) 82%, white), var(--primary)); color: var(--primary-fg); box-shadow: 0 8px 24px color-mix(in oklch, var(--primary) 18%, transparent); }
+    .btn-secondary { background: var(--card); color: var(--fg); }
+    .btn:focus-visible { outline: 3px solid var(--ring-a); outline-offset: 3px; }
+    .rings { position: relative; width: 148px; height: 148px; }
+    .rings-engine { position: absolute; inset: 0 auto auto 0; width: 250px; height: 250px; transform: scale(.592); transform-origin: top left; }
+    .wealth-ring { position: absolute; top: 50%; left: 50%; border-radius: 100%; transform: translate(-50%,-50%); }
+    .wealth-ring::before { content: ""; position: absolute; inset: 0; border-radius: inherit; }
+    .wealth-ring::after { content: ""; position: absolute; top: 50%; left: 50%; width: 57px; height: 57px; border-radius: 50%; background: var(--bg); transform: translate(-50%,-50%); }
+    .wealth-dot { position: absolute; z-index: 2; width: 100%; height: 100%; }
+    .wealth-dot::after { content: ""; position: absolute; left: 50%; width: 32px; height: 32px; border-radius: 50%; background: transparent; box-shadow: 3px 0 3px rgba(0,0,0,.24); transform: translateX(-50%); }
+    .wealth-progress { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); }
+    .wealth-progress circle { transform: rotate(270deg); transform-origin: 50% 50%; }
+    .wealth-promise { width: 250px; height: 250px; background: color-mix(in oklch,var(--ring-a) 32%,transparent); }
+    .wealth-promise::before { box-shadow: 1px 0 3px color-mix(in oklch,var(--ring-a) 48%,transparent); }
+    .wealth-promise::after { box-shadow: inset 1px 0 3px color-mix(in oklch,var(--ring-a) 48%,transparent); }
+    .wealth-goal { width: 185px; height: 185px; background: color-mix(in oklch,var(--ring-b) 32%,transparent); }
+    .wealth-goal::after { box-shadow: inset 1px 0 3px color-mix(in oklch,var(--ring-b) 48%,transparent); }
+    .wealth-circle { width: 122px; height: 122px; background: color-mix(in oklch,var(--ring-c) 32%,transparent); }
+    .wealth-circle::after { box-shadow: inset 1px 0 3px color-mix(in oklch,var(--ring-c) 48%,transparent); }
+    .ring-center { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; pointer-events: none; }
+    .ring-center b { font-size: 21px; }
+    .ring-center small { color: var(--muted-fg); font-size: 10px; }
+    .social { margin: 0 22px 22px; padding: 14px 16px; border: 1px solid var(--border); border-radius: 17px; background: var(--card); }
+    .social b { font-size: 13px; }
+    .social p { margin: 3px 0 0; color: var(--muted-fg); font-size: 12px; }
+    .contrast { display: flex; gap: 10px; flex-wrap: wrap; padding: 12px 22px; border-top: 1px solid var(--border); color: var(--muted-fg); font-size: 10px; }
+    .contrast span::before { content: "✓ "; color: var(--ring-a); font-weight: 900; }
+    .footer { margin-top: 34px; padding: 24px; border-radius: 20px; background: #191b19; color: #c8cbc5; text-align: center; }
+    .footer code { color: white; }
+    @media(max-width:800px){.grid{grid-template-columns:1fr}.mock{grid-template-columns:1fr 148px}}
+    @media(max-width:480px){.mock{grid-template-columns:1fr}.rings{margin:8px auto 0}.topbar p{display:none}}
+    @media(prefers-reduced-motion:no-preference){.palette{transition:background 320ms cubic-bezier(.23,1,.32,1),color 320ms cubic-bezier(.23,1,.32,1)}}
+  </style>
+</head>
+<body>
+  <div class="topbar"><div><h1>Social Wealth · crypto signal study</h1><p>BTC gold × Solana purple × signal red</p></div><button class="toggle" id="theme-toggle">Switch to light</button></div>
+  <main class="container">
+    <div class="intro"><span>Brighter hue · wider tonal range</span><h2>Yellow. Purple. Red.</h2><p>The rings now use an Apple-like color profile: a vivid yellow instead of muted gold, plus a clearly brighter head and deeper tail on every stroke.</p></div>
+    <div class="grid" id="palette-grid"></div>
+    <div class="footer">Pick <code>1–6</code>, say <code>more like 3</code>, or tell me which color should lead.</div>
+  </main>
+  <script>
+    const palettes = [
+      {name:'Genesis Signal',vibe:'iconic · confident · crypto-native',dark:['#090a0e','#13151c','#ffd60a','#bf5af2','#ff375f','#faf8f4'],light:['#f8f6f0','#ffffff','#785900','#6630a8','#ad2636','#1d1914'],ringsDark:['#ffd60a','#bf5af2','#ff375f'],ringsLight:['#ffcc00','#af52de','#ff2d55']},
+      {name:'Purple Ledger',vibe:'solana-first · premium · focused',dark:['#0c0911','#18121f','#bf5af2','#ffd60a','#ff375f','#faf7ff'],light:['#f8f4fc','#ffffff','#60309b','#785900','#ad2638','#211829'],ringsDark:['#bf5af2','#ffd60a','#ff375f'],ringsLight:['#af52de','#ffcc00','#ff2d55']},
+      {name:'Red Momentum',vibe:'human · energetic · decisive',dark:['#10090c','#1d1217','#ff375f','#ffd60a','#bf5af2','#fff7f8'],light:['#fcf5f6','#ffffff','#a61f31','#785900','#6330a2','#29181d'],ringsDark:['#ff375f','#ffd60a','#bf5af2'],ringsLight:['#ff2d55','#ffcc00','#af52de']},
+      {name:'Aurum Pulse',vibe:'warm · polished · quietly electric',dark:['#0d0b0d','#191519','#ffe45e','#b77be5','#ff647d','#fbf8f2'],light:['#faf7f1','#ffffff','#745900','#61409d','#a52d39','#211b18'],ringsDark:['#ffe45e','#b77be5','#ff647d'],ringsLight:['#ffda3d','#a96dd8','#ed526b']},
+      {name:'Neon Reserve',vibe:'bold · youthful · unmistakable',dark:['#09080f','#151120','#ffea00','#c13cff','#ff174d','#fdf9ff'],light:['#f8f5fc','#ffffff','#715c00','#642aa8','#a6162c','#21172a'],ringsDark:['#ffea00','#c13cff','#ff174d'],ringsLight:['#ffdc00','#ae2bea','#e8003d']},
+      {name:'Soft Consensus',vibe:'social · inviting · still credible',dark:['#0f0c12','#1b161f','#f5d75c','#b486dd','#ee7185','#fcf8ff'],light:['#faf6f8','#ffffff','#705800','#60428f','#9c3440','#241a27'],ringsDark:['#f5d75c','#b486dd','#ee7185'],ringsLight:['#e9c94b','#a274cf','#da6073']}
+    ];
+    const grid=document.getElementById('palette-grid');
+    function tokens(p,light){const x=light?p.light:p.dark,r=light?p.ringsLight:p.ringsDark;return `--bg:${x[0]};--card:${x[1]};--primary:${x[2]};--ring-a:${r[0]};--ring-b:${r[1]};--ring-c:${r[2]};--fg:${x[5]};--primary-fg:${light?'#fff':'#09100c'};--muted-fg:${light?'#59645d':'#aab2ac'};--border:${light?'rgba(20,35,27,.13)':'rgba(255,255,255,.11)'};--track:${light?'rgba(20,35,27,.09)':'rgba(255,255,255,.08)'};`}
+    function card(p,i){const swatches=[p.dark[0],p.dark[1],...p.ringsDark];return `<article class="palette" data-dark="${tokens(p,false)}" data-light="${tokens(p,true)}" style="${tokens(p,false)}"><header><span class="number">${i+1}</span><div><h3>${p.name}</h3><p class="vibe">${p.vibe}</p></div></header><div class="swatches">${swatches.map(v=>`<i style="background:${v}"><small>${v}</small></i>`).join('')}</div><div class="mock"><div><p class="eyebrow">Monday · week 8</p><h4>Still showing up.</h4><p class="mock-copy">Your amount stays private. Your consistency speaks for itself.</p><div class="button-row"><button class="btn btn-primary">Keep promise</button><button class="btn btn-secondary">Cheer circle</button></div></div><div class="rings"><svg viewBox="0 0 160 160" aria-label="Promise, goal and circle rings"><circle class="track" cx="80" cy="80" r="65" stroke-width="14"/><circle class="a" cx="80" cy="80" r="65" stroke-width="14" stroke-dasharray="408" stroke-dashoffset="46"/><circle class="track" cx="80" cy="80" r="46" stroke-width="14"/><circle class="b" cx="80" cy="80" r="46" stroke-width="14" stroke-dasharray="289" stroke-dashoffset="104"/><circle class="track" cx="80" cy="80" r="27" stroke-width="14"/><circle class="c" cx="80" cy="80" r="27" stroke-width="14" stroke-dasharray="170" stroke-dashoffset="42"/></svg><div class="ring-center"><b>8</b><small>week streak</small></div></div></div><div class="social"><b>3 of 4 friends are on track</b><p>Maya kept her promise today · amount hidden</p></div><div class="contrast"><span>Body AA</span><span>Actions AA</span><span>Focus AA</span><span>Bright-head gradient</span></div></article>`}
+    grid.innerHTML=palettes.map(card).join('');
+    document.querySelectorAll('.rings').forEach((rings,i)=>{
+      const ring=(kind,key,size,r,c,progress,label)=>{
+        const gradient=`wealth-gradient-${key}-${i}`;
+        return `<div class="wealth-ring wealth-${kind}" data-progress="${progress}"><div class="wealth-dot"></div><svg class="wealth-progress" width="${size}" height="${size}" role="img" aria-label="${label}"><defs><linearGradient id="${gradient}" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" style="stop-color:color-mix(in oklch,var(--ring-${key}) 84%,white)"/><stop offset="100%" style="stop-color:color-mix(in oklch,var(--ring-${key}) 66%,black)"/></linearGradient></defs><circle stroke="url(#${gradient})" stroke-width="32" stroke-linecap="round" fill="transparent" r="${r}" cx="${c}" cy="${c}"/></svg></div>`;
+      };
+      rings.innerHTML=`<div class="rings-engine">${ring('promise','a',250,109,125,.89,'Promise progress: 89 percent')}${ring('goal','b',185,77,92.5,.64,'Goal progress: 64 percent')}${ring('circle','c',122,45,61,.75,'Circle progress: 3 of 4 friends')}</div><div class="ring-center"><b>8</b><small>week streak</small></div>`;
+    });
+    document.querySelectorAll('.wealth-ring').forEach(ring=>{
+      const progress=Number(ring.dataset.progress);
+      const circle=ring.querySelector('circle');
+      const length=circle.getTotalLength();
+      circle.style.strokeDasharray=`${length} ${length}`;
+      circle.style.strokeDashoffset=String(length-progress*length);
+      ring.querySelector('.wealth-dot').style.transform=`rotate(${progress*360}deg)`;
+    });
+    const root=document.documentElement,btn=document.getElementById('theme-toggle');
+    btn.addEventListener('click',()=>{const light=root.dataset.theme!=='light';root.dataset.theme=light?'light':'dark';document.body.style.background=light?'#eeefec':'#0e0f0e';document.body.style.color=light?'#151815':'#f6f7f4';btn.textContent=light?'Switch to dark':'Switch to light';document.querySelectorAll('.palette').forEach(el=>el.setAttribute('style',light?el.dataset.light:el.dataset.dark));});
+  </script>
+</body>
+</html>

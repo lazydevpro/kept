@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  KEPT widget palette — light.
+
+  These mirror `mobile/constants/theme.ts` exactly. The widget is the one surface
+  that cannot import the theme, so the values are duplicated here; the names match
+  the token names so a drift is obvious when reading them side by side.
+
+  The dark set lives in `values-night/colors.xml`, which the launcher picks up on
+  its own — the widget follows the system theme rather than the app's toggle.
+-->
+<resources>
+  <color name="kept_surface">#FFFFFFFF</color>
+  <color name="kept_hairline">#FFE8E9DE</color>
+  <color name="kept_ink">#FF0B0F0A</color>
+  <color name="kept_ink_muted">#FF5A6155</color>
+  <color name="kept_kiwi_deep">#FF4D7C0F</color>
+
+  <color name="kept_track_promise">#FFE4F3C8</color>
+  <color name="kept_track_goal">#FFE5E0FB</color>
+  <color name="kept_track_circle">#FFFBE0D8</color>
+
+  <color name="kept_ring_promise_from">#FF7FC117</color>
+  <color name="kept_ring_promise_to">#FFC3F45E</color>
+  <color name="kept_ring_goal_from">#FF6A48F0</color>
+  <color name="kept_ring_goal_to">#FFAE96FF</color>
+  <color name="kept_ring_circle_from">#FFF5502B</color>
+  <color name="kept_ring_circle_to">#FFFFA07A</color>
+</resources>
