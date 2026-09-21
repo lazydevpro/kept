@@ -1,22 +1,23 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "kept-web",
-  "compatibility_date": "2026-08-18",
 
   /*
-   * Assets-only: no `main`, so there is no Worker script and nothing to invoke per request —
-   * Cloudflare serves `out/` straight from the edge. `npm run build` produces that directory.
+   * Cloudflare Pages, not Workers Assets.
    *
-   * `single-page-application` would be wrong here. This is a static export with real HTML per
-   * route, so a bad URL should 404 rather than silently render the landing page.
+   * Both serve the same static `out/`, but the hostname differs and that is the whole reason
+   * for the choice: Workers gives `<worker>.<account-subdomain>.workers.dev`, which for this
+   * account is `kept-web.lazydevpro.workers.dev`. Pages gives `<project>.pages.dev` with no
+   * account segment.
+   *
+   * `kept.pages.dev` was the goal and is not available — the subdomain is global across all
+   * Cloudflare accounts, and creating a project called `kept` returns `kept-1rq.pages.dev`
+   * with a random suffix. `getkept` is taken too. `gokept` and `keptapp` are both free;
+   * `gokept` wins on length and echoes the `gokiwi.in` convention this site is a response to.
+   * `keptapp` is reserved as a spare.
+   *
+   * The `name` here IS the subdomain. Renaming it moves the site.
    */
-  "assets": {
-    "directory": "./out",
-    "not_found_handling": "404-page",
-    "html_handling": "auto-trailing-slash",
-  },
-
-  "workers_dev": false,
-  "preview_urls": false,
-  "observability": { "enabled": true },
+  "name": "gokept",
+  "compatibility_date": "2026-08-18",
+  "pages_build_output_dir": "./out",
 }

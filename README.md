@@ -14,7 +14,7 @@ KEPT is a private social investing habit app for Solana Mobile. People set a con
 - `docs/design/` — the KEPT design system, the source of truth for the interface.
 - `docs/private-markets.md` — Tessera and PreStocks compared, down to the mint extensions.
 
-No Cloudflare account is connected and nothing has been deployed. The checked-in configuration contains logical local bindings only; `backend/npm run deploy` is intentionally blocked.
+The landing page is deployed at <https://gokept.pages.dev>. The backend is not: no D1, queues or Durable Objects have been provisioned, and `backend/npm run deploy` is intentionally blocked.
 
 ## Local start
 

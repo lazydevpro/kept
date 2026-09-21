@@ -3,9 +3,11 @@
 One page. The spec, section by section, is [`docs/plans/landing-page.md`](../docs/plans/landing-page.md);
 this file covers how to run it and the two or three things about it that are not obvious.
 
-Next.js with `output: 'export'` — static HTML served from Cloudflare Workers Assets. There is no
-server. The one piece of live data the page will eventually show comes from the existing Worker
-in `backend/`, not from here.
+Next.js with `output: 'export'` — static HTML on Cloudflare Pages, live at
+**<https://gokept.pages.dev>**. There is no server.
+
+The market section's prices are real and fetched in the reader's browser straight from Jupiter,
+not through our Worker — `lib/prices.ts` explains why, and what that costs us.
 
 ## Run it
 
@@ -17,7 +19,7 @@ npm run dev
 `http://localhost:3000`. `/foundation` is a living reference for the tokens, the type scale and
 the motion harness — `noindex`, but part of the build, so it cannot drift out of date.
 
-To serve the real production output through the real Workers Assets runtime:
+To serve the real production output through the Pages runtime:
 
 ```bash
 npm run preview
@@ -42,8 +44,32 @@ It loads the built page twice with `prefers-reduced-motion` emulated each way, s
 wheel events, and asserts what actually moved — then tabs through and checks the focus order and
 rings. Run both after any section lands.
 
-`npm run deploy` is deliberately blocked — see `scripts/deploy-guard.mjs`. No Cloudflare account
-is connected to this repo.
+## Deploying
+
+Live at **<https://gokept.pages.dev>**.
+
+```bash
+npm run deploy
+```
+
+Builds and pushes to Cloudflare Pages. Deploying from `main` publishes to production; any other
+branch gets a preview URL.
+
+**The project name is the subdomain.** `name` in `wrangler.jsonc` is `gokept`, so the site is
+`gokept.pages.dev`. Change that name and the site moves.
+
+Two things about Pages that will waste your time otherwise:
+
+- **`kept.pages.dev` is not available.** The `*.pages.dev` namespace is global across every
+  Cloudflare account, not per-account. Creating a project named `kept` silently returns
+  `kept-1rq.pages.dev` with a random suffix rather than failing. `getkept` is taken too.
+  `keptapp` is free and reserved on this account as a spare.
+- **Creating a _new_ Pages project needs `--force`.** Wrangler 4.131 delegates `wrangler pages`
+  commands to Workers, and that delegation fails against a `pages_build_output_dir` config.
+  Once the project exists, plain `wrangler pages deploy` works and `--force` is not needed.
+
+For a real launch, attach a purchased domain as a Pages custom domain — `*.pages.dev` is fine
+for a demo and wrong for a brand.
 
 ## Design tokens are generated, not written
 
