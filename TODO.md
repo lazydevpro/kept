@@ -130,6 +130,32 @@ member, 404 for a bogus or spent token), the join screen, reactions (422 on an u
 emoji, 404 on an unknown post, 403 from outside the circle), and the Durable Object live
 room — a reaction posted over HTTP arrives on the socket as `reaction.added`.
 
+## Done — awards beyond the streak #awards
+
+- [x] Awards were derived from one number, the week streak, so the only way to earn anything
+      was to never miss. That rewards whoever was already consistent and says nothing about
+      building the habit *with* people, which is the part of this product that is novel #screens
+- [x] `GET /v1/awards` — four counters: week streak, friends, nudges sent, perfect months.
+      The streak walk is the same one the Week screen uses, and both endpoints were checked
+      to agree rather than assumed to #backend
+- [x] Perfect months: a finished calendar month with at least one promise due and none
+      missed. Deliberately not the streak — a streak ends for good, a month can be perfect
+      again after a bad one. In-progress months are excluded so a good first week cannot
+      hand out the award early. Cross-checked against the raw promise rows #backend
+- [x] Nudges are a real action, not just a counter: `POST /v1/circles/:id/members/:id/nudge`,
+      migration 0009. One per person per week (the UNIQUE key is the rate limit), only into
+      an open promise, only inside the circle, never at yourself. Posts to the feed and sends
+      a best-effort push, so a nudge still lands for someone with notifications off #backend
+- [x] Six new awards across three groups — Together (1, 3 friends), Encouragement (1, 10
+      nudges), Whole months (1, 3 perfect months) — and the collection is grouped by what
+      each one recognises rather than shown as one ladder of six week-badges #design
+- [x] The header no longer claims "Latest award": nothing records when an award was earned,
+      and across four metrics the last in the list is not the newest #design
+- [x] The nudge button only appears on a member who is not you and whose week is still open,
+      so the row never offers a dead action. `IconButton` gained `disabled` #screens
+- [x] Regression test drives the whole path — real invite, real goal and promise, then the
+      rate limit, the self-nudge refusal and the award counters #verify
+
 ## Now — blocked on hardware or accounts I do not have
 
 - [ ] Push is OFF in local builds: `extra.eas.projectId` is missing from app.json, so

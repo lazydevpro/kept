@@ -283,6 +283,7 @@ export function IconButton({
    * inside a white card, where a white button would be invisible.
    */
   on = 'background',
+  disabled,
 }: {
   name: IconName
   onPress: () => void
@@ -290,7 +291,9 @@ export function IconButton({
   tone?: Tone
   size?: number
   on?: 'background' | 'card' | 'none'
+  disabled?: boolean
 }) {
+  const styles = useStyles()
   const { colors } = useAppTheme()
   const toned = useTone(tone)
   const neutralBackground = on === 'none' ? 'transparent' : on === 'card' ? colors.surfaceSunken : colors.surface
@@ -298,6 +301,7 @@ export function IconButton({
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={label}
+      disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => [
         {
@@ -308,7 +312,8 @@ export function IconButton({
           justifyContent: 'center',
           backgroundColor: tone === 'neutral' ? neutralBackground : toned.bg,
         },
-        pressed && motion.pressed,
+        pressed && !disabled && motion.pressed,
+        disabled && styles.disabled,
       ]}
     >
       <Icon name={name} size={size * 0.46} color={tone === 'neutral' ? colors.ink : toned.fg} />

@@ -201,6 +201,89 @@ describe("Neon Reserve API", () => {
     expect(rejected.status).toBe(422);
   });
 
+  /**
+   * A nudge points at a person rather than a post, so its fences are the whole
+   * feature: one per person per week, only into an open promise, only inside
+   * the circle, never at yourself.
+   */
+  it("fences a nudge to one open promise per friend per week", async () => {
+    const signIn = async () => {
+      const response = await SELF.fetch(
+        "https://local.test/api/auth/sign-in/anonymous",
+        {
+          method: "POST",
+          headers: { "content-type": "application/json", origin: "neonreserve://" },
+          body: "{}",
+        },
+      );
+      return response.headers.get("set-cookie") ?? "";
+    };
+    const post = (path: string, cookie: string, body: unknown = {}) =>
+      SELF.fetch(`https://local.test${path}`, {
+        method: "POST",
+        headers: { "content-type": "application/json", cookie },
+        body: JSON.stringify(body),
+      });
+
+    const owner = await signIn();
+    const friend = await signIn();
+
+    const created = await post("/v1/circles", owner, { name: "Nudge Club" });
+    const { id: circleId } = (await created.json()) as { id: string };
+
+    // The friend joins through a real invite rather than a direct insert.
+    const invited = await post(`/v1/circles/${circleId}/invites`, owner, {});
+    const { invite } = (await invited.json()) as { invite: { deepLink: string } };
+    const token = invite.deepLink.split("/").pop() as string;
+    expect((await post(`/v1/invites/${token}/accept`, friend)).status).toBe(200);
+
+    const friendId = await (async () => {
+      const me = await SELF.fetch("https://local.test/v1/me", { headers: { cookie: friend } });
+      return ((await me.json()) as { profile: { id: string } }).profile.id;
+    })();
+
+    // With no open promise there is nothing to nudge about.
+    const tooEarly = await post(`/v1/circles/${circleId}/members/${friendId}/nudge`, owner);
+    expect(tooEarly.status).toBe(409);
+    expect(((await tooEarly.json()) as { error: { code: string } }).error.code).toBe("nothing_to_nudge");
+
+    // Give the friend a promise that is still open: due a week from now.
+    const goal = await post("/v1/goals", friend, {
+      title: "Show up",
+      targetType: "weekly_consistency",
+      targetValue: 12,
+      visibility: "progress_only",
+    });
+    const { id: goalId } = (await goal.json()) as { id: string };
+    const dueAt = new Date(Date.now() + 5 * 86_400_000).toISOString();
+    expect(
+      (
+        await post(`/v1/goals/${goalId}/promises`, friend, {
+          weekStart: new Date().toISOString().slice(0, 10),
+          dueAt,
+        })
+      ).status,
+    ).toBe(201);
+
+    const first = await post(`/v1/circles/${circleId}/members/${friendId}/nudge`, owner);
+    expect(first.status).toBe(201);
+
+    // The UNIQUE key is the rate limit: one per person per week.
+    const again = await post(`/v1/circles/${circleId}/members/${friendId}/nudge`, owner);
+    expect(again.status).toBe(409);
+    expect(((await again.json()) as { error: { code: string } }).error.code).toBe("already_nudged");
+
+    const self = await post(`/v1/circles/${circleId}/members/${friendId}/nudge`, friend);
+    expect(self.status).toBe(422);
+    expect(((await self.json()) as { error: { code: string } }).error.code).toBe("self_nudge");
+
+    // And it shows up in the award counters the screen reads.
+    const awards = await SELF.fetch("https://local.test/v1/awards", { headers: { cookie: owner } });
+    const { counters } = (await awards.json()) as { counters: { nudgesSent: number; friends: number } };
+    expect(counters.nudgesSent).toBe(1);
+    expect(counters.friends).toBeGreaterThanOrEqual(1);
+  });
+
   it("does not expose an invalid invitation", async () => {
     const response = await SELF.fetch(
       "https://local.test/v1/invites/not-a-real-token",

@@ -3,7 +3,7 @@ import { z } from "zod";
 import { ApiError, id, sha256 } from "../lib/http";
 import { parseJson, publicProfile } from "../lib/validation";
 import { authenticated } from "../middleware/authenticated";
-import type { AppEnv, Variables } from "../types";
+import type { AppEnv, Job, Variables } from "../types";
 
 export const circleRoutes = new Hono<{
   Bindings: AppEnv;
@@ -279,6 +279,73 @@ circleRoutes.delete("/:circleId/posts/:postId/reactions", async (c) => {
     emoji: emoji.data,
   });
   return c.json({ reacted: false });
+});
+
+/**
+ * Nudge a member whose week is still open.
+ *
+ * The one social action that points at a person rather than a post, so it is
+ * fenced in on purpose: both people must be in the circle, you cannot nudge
+ * yourself, and the week has to actually be open — nudging someone who already
+ * kept their promise is noise, not encouragement. The UNIQUE key on `nudges`
+ * allows one per person per week, which is what stops a circle turning into a
+ * place people get poked.
+ *
+ * The push is best effort. The feed entry is the durable part, so a nudge still
+ * lands for someone who has notifications off.
+ */
+circleRoutes.post("/:circleId/members/:memberId/nudge", async (c) => {
+  const circleId = c.req.param("circleId");
+  const target = c.req.param("memberId");
+  const userId = c.get("userId");
+
+  await requireMember(c.env, circleId, userId);
+  if (target === userId) throw new ApiError(422, "You cannot nudge yourself.", "self_nudge");
+  await requireMember(c.env, circleId, target);
+
+  const open = await c.env.DB.prepare(
+    `SELECT week_start FROM weekly_promises
+     WHERE user_id = ? AND completed_at IS NULL AND due_at > CURRENT_TIMESTAMP
+     ORDER BY week_start DESC LIMIT 1`,
+  )
+    .bind(target)
+    .first<{ week_start: string }>();
+  if (!open)
+    throw new ApiError(409, "They have no open promise this week.", "nothing_to_nudge");
+
+  const inserted = await c.env.DB.prepare(
+    `INSERT OR IGNORE INTO nudges (id, circle_id, from_user_id, to_user_id, week_start)
+     VALUES (?, ?, ?, ?, ?)`,
+  )
+    .bind(id("nudge"), circleId, userId, target, open.week_start)
+    .run();
+  // `changes` is 0 when the UNIQUE key already held a row for this week.
+  if (!inserted.meta.changes)
+    throw new ApiError(409, "You already nudged them this week.", "already_nudged");
+
+  const me = await c.env.DB.prepare(
+    "SELECT display_name FROM profiles WHERE user_id = ?",
+  )
+    .bind(userId)
+    .first<{ display_name: string }>();
+  const from = me?.display_name ?? "Someone";
+
+  await c.env.DB.prepare(
+    "INSERT INTO activity_posts (id, circle_id, user_id, kind, body) VALUES (?, ?, ?, 'encouragement', ?)",
+  )
+    .bind(id("post"), circleId, userId, `${from} nudged a friend to keep this week`)
+    .run();
+
+  await c.env.JOBS.send({
+    kind: "send_push",
+    userIds: [target],
+    title: "A nudge from your circle",
+    body: `${from} is cheering you on. Your week is still open.`,
+    data: { circleId },
+  } satisfies Job);
+
+  await broadcast(c.env, circleId, { type: "nudge.sent", toUserId: target });
+  return c.json({ nudged: true, weekStart: open.week_start }, 201);
 });
 
 circleRoutes.get("/:circleId/live", async (c) => {

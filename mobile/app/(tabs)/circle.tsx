@@ -18,6 +18,7 @@ import { makeThemedStyles, useAppTheme } from '@/components/theme-provider'
 import { IconPlate } from '@/design/icons'
 import { Illustration } from '@/design/illustrations'
 import { RingGlyph } from '@/features/progress/rings'
+import { useNudge } from '@/features/awards/awards-api'
 import {
   readReactions,
   useCircle,
@@ -62,6 +63,7 @@ export default function CircleScreen() {
   const createCircle = useCreateCircle()
   const shareInvite = useShareInvite(circleId)
   const toggleReaction = useToggleReaction(circleId)
+  const nudge = useNudge(circleId)
 
   const [naming, setNaming] = useState(false)
   const [name, setName] = useState('')
@@ -95,6 +97,16 @@ export default function CircleScreen() {
   }
 
   const primaryAction = () => (circleId ? invite() : setNaming(true))
+
+  const sendNudge = async (memberId: string, displayName: string) => {
+    try {
+      await nudge.mutateAsync(memberId)
+      Alert.alert('Nudge sent', `${displayName} knows you are cheering them on.`)
+    } catch (error) {
+      // "Already nudged this week" is a rule, not a failure — say so plainly.
+      Alert.alert('Not sent', error instanceof Error ? error.message : 'Please try again.')
+    }
+  }
 
   const nameSheet = (
     <Sheet
@@ -217,6 +229,19 @@ export default function CircleScreen() {
                       {member.showedUp ? 'Kept this week' : 'Still open'}
                     </T>
                   </View>
+                  {/* A nudge only makes sense pointed at an open week, and only
+                      at someone else — the server enforces both, and hiding it
+                      otherwise keeps the row from offering a dead action. */}
+                  {!isYou && !member.showedUp ? (
+                    <IconButton
+                      name="bell"
+                      label={`Nudge ${member.displayName}`}
+                      tone="sun"
+                      on="card"
+                      disabled={nudge.isPending}
+                      onPress={() => sendNudge(member.id, member.displayName)}
+                    />
+                  ) : null}
                   <RingGlyph
                     size={64}
                     promise={member.showedUp ? 1 : 0}

@@ -7,6 +7,7 @@ import { circleRoutes, inviteRoutes, liveRoutes } from "./routes/circles";
 import { contributionRoutes } from "./routes/contributions";
 import { goalRoutes } from "./routes/goals";
 import { mediaRoutes } from "./routes/media";
+import { awardRoutes } from "./routes/awards";
 import { portfolioRoutes } from "./routes/portfolio";
 import { profileRoutes } from "./routes/profile";
 import { walletRoutes } from "./routes/wallets";
@@ -63,6 +64,7 @@ app.route("/v1/wallets", walletRoutes);
 app.route("/v1/contributions", contributionRoutes);
 app.route("/v1/widget", widgetRoutes);
 app.route("/v1/portfolio", portfolioRoutes);
+app.route("/v1/awards", awardRoutes);
 app.route("/v1/trades", tradeRoutes);
 
 app.notFound((c) =>
