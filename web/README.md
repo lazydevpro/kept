@@ -4,7 +4,7 @@ One page. The spec, section by section, is [`docs/plans/landing-page.md`](../doc
 this file covers how to run it and the two or three things about it that are not obvious.
 
 Next.js with `output: 'export'` — static HTML on Cloudflare Pages, live at
-**<https://gokept.pages.dev>**. There is no server.
+**<https://keptapp.pages.dev>**. There is no server.
 
 The market section's prices are real and fetched in the reader's browser straight from Jupiter,
 not through our Worker — `lib/prices.ts` explains why, and what that costs us.
@@ -46,7 +46,7 @@ rings. Run both after any section lands.
 
 ## Deploying
 
-Live at **<https://gokept.pages.dev>**.
+Live at **<https://keptapp.pages.dev>**.
 
 ```bash
 npm run deploy
@@ -55,15 +55,15 @@ npm run deploy
 Builds and pushes to Cloudflare Pages. Deploying from `main` publishes to production; any other
 branch gets a preview URL.
 
-**The project name is the subdomain.** `name` in `wrangler.jsonc` is `gokept`, so the site is
-`gokept.pages.dev`. Change that name and the site moves.
+**The project name is the subdomain.** `name` in `wrangler.jsonc` is `keptapp`, so the site is
+`keptapp.pages.dev`. Change that name and the site moves.
 
 Two things about Pages that will waste your time otherwise:
 
 - **`kept.pages.dev` is not available.** The `*.pages.dev` namespace is global across every
   Cloudflare account, not per-account. Creating a project named `kept` silently returns
-  `kept-1rq.pages.dev` with a random suffix rather than failing. `getkept` is taken too.
-  `keptapp` is free and reserved on this account as a spare.
+  `kept-1rq.pages.dev` with a random suffix rather than failing. `getkept` is taken the same
+  way. `gokept` is free and stays reserved on this account as a spare.
 - **Creating a _new_ Pages project needs `--force`.** Wrangler 4.131 delegates `wrangler pages`
   commands to Workers, and that delegation fails against a `pages_build_output_dir` config.
   Once the project exists, plain `wrangler pages deploy` works and `--force` is not needed.

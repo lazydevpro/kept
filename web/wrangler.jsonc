@@ -11,13 +11,13 @@
    *
    * `kept.pages.dev` was the goal and is not available — the subdomain is global across all
    * Cloudflare accounts, and creating a project called `kept` returns `kept-1rq.pages.dev`
-   * with a random suffix. `getkept` is taken too. `gokept` and `keptapp` are both free;
-   * `gokept` wins on length and echoes the `gokiwi.in` convention this site is a response to.
-   * `keptapp` is reserved as a spare.
+   * with a random suffix rather than failing. `getkept` is taken the same way. `keptapp` and
+   * `gokept` are both free and both reserved on this account; `keptapp` is the live one and
+   * `gokept` is the spare.
    *
    * The `name` here IS the subdomain. Renaming it moves the site.
    */
-  "name": "gokept",
+  "name": "keptapp",
   "compatibility_date": "2026-08-18",
   "pages_build_output_dir": "./out",
 }
