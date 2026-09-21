@@ -18,7 +18,7 @@
 
 import { getTransactionDecoder, getTransactionEncoder } from '@solana/kit'
 import { Base64 } from 'js-base64'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ActivityIndicator, Alert, Pressable, StyleSheet, TextInput, View } from 'react-native'
 import { useMobileWallet } from '@wallet-ui/react-native-kit'
 import { Button, Chip, Row, Sheet, T } from '@/components/ui'
@@ -98,17 +98,6 @@ export function PurchaseSheet({ asset, onClose }: { asset: InvestableAsset | nul
     setAcknowledged(false)
     setAmountText('25')
   }, [asset?.mint])
-
-  const windows = useMemo(
-    () =>
-      [
-        { label: '5m', value: detail?.change5m ?? null },
-        { label: '1h', value: detail?.change1h ?? null },
-        { label: '6h', value: detail?.change6h ?? null },
-        { label: '24h', value: detail?.change24h ?? null },
-      ] as const,
-    [detail],
-  )
 
   const price = detail?.priceUsd ?? asset?.priceUsd ?? null
   const change24h = detail?.change24h ?? asset?.priceChange24h ?? null
@@ -201,9 +190,7 @@ export function PurchaseSheet({ asset, onClose }: { asset: InvestableAsset | nul
             label={actionLabel()}
             onPress={linked ? (order ? confirm : prepare) : linkWallet}
             disabled={
-              connecting ||
-              trading ||
-              (linked && (!amountValid || !asset?.available || (isTessera && !acknowledged)))
+              connecting || trading || (linked && (!amountValid || !asset?.available || (isTessera && !acknowledged)))
             }
           />
           <T role="caption" center color={colors.inkFaint}>
@@ -229,26 +216,6 @@ export function PurchaseSheet({ asset, onClose }: { asset: InvestableAsset | nul
           {detail?.verified ? <Chip label="Verified mint" tone="neutral" /> : null}
         </Row>
       </View>
-
-      {/* ── Movement, four windows. Flat is a real answer, so a zero shows. ── */}
-      <Row gap={space[2]} style={styles.windows}>
-        {windows.map((window) => (
-          <View key={window.label} style={styles.window}>
-            <T role="caption" center color={colors.inkFaint}>
-              {window.label}
-            </T>
-            <T
-              role="label"
-              center
-              color={
-                window.value == null ? colors.inkFaint : window.value >= 0 ? colors.kiwiDeep : colors.coralDeep
-              }
-            >
-              {window.value == null ? '—' : pct(window.value)}
-            </T>
-          </View>
-        ))}
-      </Row>
 
       {/* ── Amount ── */}
       <View style={styles.field}>
@@ -338,12 +305,8 @@ export function PurchaseSheet({ asset, onClose }: { asset: InvestableAsset | nul
       <Row gap={space[2]} style={styles.stats}>
         <Stat label="Liquidity" value={detail?.liquidityUsd != null ? compact(detail.liquidityUsd) : '—'} />
         <Stat label="24h volume" value={detail?.volume24hUsd != null ? compact(detail.volume24hUsd) : '—'} />
-        <Stat
-          label="Holders"
-          value={detail?.holders != null ? detail.holders.toLocaleString('en-US') : '—'}
-        />
+        <Stat label="Holders" value={detail?.holders != null ? detail.holders.toLocaleString('en-US') : '—'} />
       </Row>
-
     </Sheet>
   )
 }
@@ -366,14 +329,6 @@ function Stat({ label, value }: { label: string; value: string }) {
 const useStyles = makeThemedStyles((colors) =>
   StyleSheet.create({
     priceBlock: { gap: space[2] },
-    windows: { justifyContent: 'space-between' },
-    window: {
-      flex: 1,
-      gap: 2,
-      paddingVertical: space[2],
-      borderRadius: radii.sm,
-      backgroundColor: colors.surfaceSunken,
-    },
     field: { gap: space[2] },
     input: {
       flexDirection: 'row',

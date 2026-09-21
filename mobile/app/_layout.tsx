@@ -10,12 +10,22 @@ import { Sora_700Bold } from '@expo-google-fonts/sora/700Bold'
 import { Sora_800ExtraBold } from '@expo-google-fonts/sora/800ExtraBold'
 import { useFonts } from 'expo-font'
 import { Stack } from 'expo-router'
+import * as SplashScreen from 'expo-splash-screen'
 import { StatusBar } from 'expo-status-bar'
+import { useCallback, useState } from 'react'
+import { StyleSheet, View } from 'react-native'
 import 'react-native-reanimated'
 import { AppProviders } from '@/components/app-providers'
 import { useAppTheme } from '@/components/theme-provider'
+import { AnimatedSplash } from '@/features/splash/animated-splash'
+
+// Hold the native splash until the fonts are in. Without this it hides on the first frame,
+// which is the frame this layout renders nothing on — so the opening was a cream field, a
+// blank white gap, then the app.
+SplashScreen.preventAutoHideAsync().catch(() => undefined)
 
 export default function RootLayout() {
+  const [introPlayed, setIntroPlayed] = useState(false)
   const [fontsLoaded] = useFonts({
     Inter_400Regular,
     Inter_500Medium,
@@ -29,11 +39,22 @@ export default function RootLayout() {
     Sora_800ExtraBold,
   })
 
+  // Handing the native splash over only once this tree has painted is what keeps the seam
+  // invisible: the overlay is already on screen, in the same cream, before the splash goes.
+  const handOver = useCallback(() => {
+    SplashScreen.hideAsync().catch(() => undefined)
+  }, [])
+
   if (!fontsLoaded) return null
 
   return (
     <AppProviders>
       <RootNavigation />
+      {introPlayed ? null : (
+        <View style={StyleSheet.absoluteFill} pointerEvents="box-none" onLayout={handOver}>
+          <AnimatedSplash onFinish={() => setIntroPlayed(true)} />
+        </View>
+      )}
     </AppProviders>
   )
 }
@@ -49,6 +70,7 @@ function RootNavigation() {
         <Stack.Screen name="awards" options={{ headerShown: false }} />
         <Stack.Screen name="portfolio" options={{ headerShown: false }} />
         <Stack.Screen name="markets" options={{ headerShown: false }} />
+        <Stack.Screen name="asset/[mint]" options={{ headerShown: false }} />
         <Stack.Screen name="join/[token]" options={{ headerShown: false }} />
       </Stack>
       <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />

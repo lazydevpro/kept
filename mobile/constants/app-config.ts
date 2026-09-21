@@ -8,7 +8,7 @@ import {
 import { Platform } from 'react-native'
 
 export class AppConfig {
-  static identity: AppIdentity = { name: 'KEPT', uri: 'https://neon-reserve-web.lazydevpro.workers.dev' }
+  static identity: AppIdentity = { name: 'KEPT', uri: 'https://kept.lazydevpro.workers.dev' }
   static apiUrl = process.env.EXPO_PUBLIC_API_URL ?? (__DEV__ ? devApiUrl() : missingApiUrl())
   static networks: SolanaCluster[] =
     process.env.EXPO_PUBLIC_SOLANA_CLUSTER === 'mainnet-beta'

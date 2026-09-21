@@ -61,6 +61,7 @@ IMAGES = os.path.join(ROOT, "assets", "images")
 WITH_PROMISE = True
 
 INK = "#0B0F0A"
+CREAM = "#FBFBF4"
 KIWI_LIGHT = "#C3F45E"  # top left, where the light comes from
 KIWI_SHADE = "#7FC117"  # bottom right
 
@@ -94,11 +95,11 @@ BAND_WIDTH = 0.148
 SAFE_SCALE = 0.72
 BAND_SAFE_SCALE = 0.30 / BAND_OUTER
 
-# The splash ramp is darker at both ends. The icon ramp's light end is almost
-# invisible against the cream splash background, and the splash has no ink field
-# to sit on.
-SPLASH_LIGHT = "#9BDB33"
-SPLASH_SHADE = "#5F9410"
+# Darker at both ends, for anything sitting on cream. The `lit` ramp's light end is
+# almost invisible there. The splash needed this first — it has no ink field to sit on —
+# and the icon needs it for the same reason now that it is cream rather than ink.
+CREAM_LIGHT = "#9BDB33"
+CREAM_SHADE = "#5F9410"
 
 
 def gradient(name, light, shade):
@@ -199,18 +200,21 @@ def sources():
     art = promise_paths() if WITH_PROMISE else None
     safe = SAFE_SCALE if WITH_PROMISE else BAND_SAFE_SCALE
 
-    icon_grad = gradient("lit", KIWI_LIGHT, KIWI_SHADE)
-    splash_grad = gradient("splashlit", SPLASH_LIGHT, SPLASH_SHADE)
+    ink_grad = gradient("lit", KIWI_LIGHT, KIWI_SHADE)
+    cream_grad = gradient("oncream", CREAM_LIGHT, CREAM_SHADE)
 
     return {
-        "icon": document(painted(mark(art=art), "lit"), INK, icon_grad),
-        "icon-foreground": document(painted(mark(safe, art=art), "lit"), None, icon_grad),
+        # The icon is cream, like the app itself: light-first is the brand, and an ink
+        # tile read as a different product sitting next to a cream splash.
+        "icon": document(painted(mark(art=art), "oncream"), CREAM, cream_grad),
+        "icon-foreground": document(painted(mark(safe, art=art), "oncream"), None, cream_grad),
         # The launcher tints this layer flat, so the gradient would be thrown away
         # — it has to be one solid colour.
         "icon-monochrome": document(mark(safe, art=art)),
-        "mark": document(painted(mark(art=art), "lit"), None, icon_grad),
-        "splash": document(painted(mark(0.88, art=art), "splashlit"), None, splash_grad),
-        "icon-background": document("", INK),
+        # The bare mark keeps the brighter ramp: it is the one that goes on ink.
+        "mark": document(painted(mark(art=art), "lit"), None, ink_grad),
+        "splash": document(painted(mark(0.88, art=art), "oncream"), None, cream_grad),
+        "icon-background": document("", CREAM),
     }
 
 
@@ -225,9 +229,31 @@ OUTPUTS = [
 ]
 
 
+def rasteriser():
+    """rsvg-convert where it exists, otherwise the bundled resvg script.
+
+    librsvg is a system package with no usable Windows build, which left the assets
+    impossible to regenerate on a Windows machine. `npm install` brings resvg with it,
+    so the Node path needs nothing extra installed by hand.
+    """
+    if shutil.which("rsvg-convert"):
+        return lambda source, out, size: [
+            "rsvg-convert", "-w", str(size), "-h", str(size), source, "-o", out
+        ]
+
+    node = shutil.which("node")
+    script = os.path.join(ROOT, "scripts", "rasterise.mjs")
+    if node and os.path.exists(script):
+        return lambda source, out, size: [node, script, source, out, str(size)]
+
+    sys.exit(
+        "No rasteriser. Either install librsvg (brew install librsvg) or run "
+        "`npm install` in mobile/ so that resvg is available to scripts/rasterise.mjs."
+    )
+
+
 def main():
-    if not shutil.which("rsvg-convert"):
-        sys.exit("rsvg-convert not found — install it with: brew install librsvg")
+    command = rasteriser()
 
     os.makedirs(BRAND, exist_ok=True)
     for name, svg in sources().items():
@@ -235,16 +261,7 @@ def main():
 
     for name, out, size in OUTPUTS:
         subprocess.run(
-            [
-                "rsvg-convert",
-                "-w",
-                str(size),
-                "-h",
-                str(size),
-                os.path.join(BRAND, name + ".svg"),
-                "-o",
-                os.path.join(IMAGES, out),
-            ],
+            command(os.path.join(BRAND, name + ".svg"), os.path.join(IMAGES, out), size),
             check=True,
         )
         print("  %-32s %dpx" % (out, size))

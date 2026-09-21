@@ -9,7 +9,9 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
-      "associatedDomains": ["applinks:neon-reserve-web.lazydevpro.workers.dev"]
+      "associatedDomains": [
+        "applinks:kept.lazydevpro.workers.dev"
+      ]
     },
     "android": {
       "adaptiveIcon": {
@@ -23,9 +25,18 @@
       "intentFilters": [
         {
           "action": "VIEW",
-          "autoVerify": false,
-          "data": [{ "scheme": "https", "host": "neon-reserve-web.lazydevpro.workers.dev", "pathPrefix": "/join" }],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "kept.lazydevpro.workers.dev",
+              "pathPrefix": "/join"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ]
     },
@@ -39,8 +50,8 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 220,
+          "image": "./assets/images/splash-blank.png",
+          "imageWidth": 64,
           "resizeMode": "contain",
           "backgroundColor": "#FBFBF4",
           "dark": {
@@ -50,7 +61,8 @@
       ],
       "expo-web-browser",
       "expo-secure-store",
-      "expo-notifications"
+      "expo-notifications",
+      "expo-sharing"
     ],
     "experiments": {
       "reactCompiler": true,

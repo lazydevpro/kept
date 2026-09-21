@@ -21,7 +21,6 @@ import { makeThemedStyles, useAppTheme } from '@/components/theme-provider'
 import { Icon } from '@/design/icons'
 import { Illustration } from '@/design/illustrations'
 import { AssetLogo } from '@/features/trade/asset-logo'
-import { PurchaseSheet } from '@/features/trade/purchase-sheet'
 import { useAssetCatalog, type InvestableAsset } from '@/features/trade/trade-api'
 
 const price = (value: number) =>
@@ -36,7 +35,8 @@ export default function MarketsScreen() {
   const styles = useStyles()
   const router = useRouter()
   const [query, setQuery] = useState('')
-  const [selected, setSelected] = useState<InvestableAsset | null>(null)
+  // Rows open the asset's own page; the buy sheet is one step further in, behind its Buy button.
+  const openAsset = (asset: InvestableAsset) => router.push({ pathname: '/asset/[mint]', params: { mint: asset.mint } })
   const catalog = useAssetCatalog(query)
 
   const pages = catalog.data?.pages ?? []
@@ -95,7 +95,7 @@ export default function MarketsScreen() {
         ) : (
           <View style={styles.list}>
             {assets.map((asset) => (
-              <AssetRow key={asset.mint} asset={asset} onSelect={setSelected} />
+              <AssetRow key={asset.mint} asset={asset} onSelect={openAsset} />
             ))}
           </View>
         )}
@@ -116,8 +116,6 @@ export default function MarketsScreen() {
           </T>
         ) : null}
       </Screen>
-
-      <PurchaseSheet asset={selected} onClose={() => setSelected(null)} />
     </>
   )
 }

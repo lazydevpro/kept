@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router'
-import { Share, StyleSheet, View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
 import { AppHeader } from '@/components/app-header'
 import { Button, Card, IconButton, PressableCard, Row, Screen, SectionHeader, Stat, T } from '@/components/ui'
 import { radii, space } from '@/constants/theme'
@@ -10,6 +10,7 @@ import { ConsistencyStrip } from '@/features/progress/consistency-strip'
 import { Rings } from '@/features/progress/rings'
 import { useRingReveal } from '@/features/progress/use-ring-reveal'
 import { useMe } from '@/features/social/social-api'
+import { WeekShareCard, useWeekShare } from '@/features/share/week-share-card'
 import { useWidgetSnapshot } from '@/features/widget/widget-sync'
 
 function greeting() {
@@ -74,10 +75,11 @@ export default function WeekScreen() {
     ? (summary?.contributions.rehearsedRecentUsd ?? [])
     : (summary?.contributions.recentUsd ?? [])
 
-  const share = () =>
-    Share.share({
-      message: `${streak} weeks kept in a row. Amount stays private. — KEPT`,
-    })
+  // The card is captured from a fixed off-screen layout rather than from the hero below,
+  // so what gets posted is the same on every phone. `targets` rather than `rings`: the
+  // reveal animation is mid-flight on first paint and would export half-drawn arcs.
+  const shareData = { rings: targets, streak, goalWeeks: summary?.goal.target ?? 12 }
+  const { cardRef, share, sharing } = useWeekShare(shareData)
 
   return (
     <Screen>
@@ -97,7 +99,7 @@ export default function WeekScreen() {
               {kept ? 'This week is already kept' : 'One promise left to keep'}
             </T>
           </View>
-          <IconButton name="share" label="Share this progress" onPress={share} on="card" />
+          <IconButton name="share" label="Share this progress" onPress={share} disabled={sharing} on="card" />
         </Row>
 
         <View style={styles.ringStage}>
@@ -229,6 +231,8 @@ export default function WeekScreen() {
           onPress={() => router.push('/(tabs)/circle')}
         />
       ) : null}
+
+      <WeekShareCard data={shareData} cardRef={cardRef} />
     </Screen>
   )
 }

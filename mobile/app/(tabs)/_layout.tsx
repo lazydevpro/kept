@@ -42,7 +42,13 @@ function TabBar({ state, navigation }: BottomTabBarProps) {
               }}
               style={({ pressed }) => [styles.tab, pressed && motion.pressed]}
             >
-              <View style={[styles.pill, focused && styles.pillActive]}>
+              {/*
+                Keyed on focus so the pill is remounted rather than updated. Android's new
+                renderer rebuilds the background drawable without the corner radius when an
+                existing view gains a background colour, which squared the active tab off
+                after the first switch; a fresh view always draws the rounded shape.
+              */}
+              <View key={focused ? 'active' : 'idle'} style={[styles.pill, focused && styles.pillActive]}>
                 <Icon name={tab.icon} size={22} color={focused ? colors.ink : colors.inkFaint} />
               </View>
               <Text style={[type.caption, styles.label, { color: focused ? colors.ink : colors.inkFaint }]}>
