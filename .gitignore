@@ -23,6 +23,8 @@ node_modules/
 dist/
 web-build/
 build/
+.next/
+/web/out/
 .expo/
 .kotlin/
 *.tsbuildinfo

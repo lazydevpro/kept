@@ -1,0 +1,100 @@
+.footer {
+  background: var(--surface-inverse);
+  color: var(--ink-inverse);
+  padding-block: clamp(4rem, 12vh, 7rem) 0;
+  overflow: clip;
+}
+
+.inner {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(2.5rem, 6vh, 4rem);
+}
+
+.top {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-4);
+}
+
+/*
+ * `promise.svg` is black line art — the pinky promise the product is named after. On the ink
+ * footer that is black on near-black, so it has to be flipped. `brightness(0) invert(1)`
+ * forces every path to white regardless of what it was, which survives the artwork being
+ * replaced later; a colour override on `fill` would not, because the fills are baked into the
+ * paths rather than inherited.
+ */
+.mark {
+  width: 7.5rem;
+  height: auto;
+  filter: brightness(0) invert(1);
+  opacity: 0.85;
+}
+
+.tagline {
+  font-family: var(--font-sora), sans-serif;
+  font-size: var(--display-2);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+.sub {
+  font-size: var(--lede);
+  color: color-mix(in srgb, var(--ink-inverse) 62%, transparent);
+  max-width: 32ch;
+}
+
+.meta {
+  display: flex;
+  justify-content: space-between;
+  gap: clamp(1.5rem, 4vw, 4rem);
+  flex-wrap: wrap;
+  padding-top: clamp(2rem, 5vh, 3rem);
+  border-top: 1px solid color-mix(in srgb, var(--ink-inverse) 14%, transparent);
+}
+
+.links {
+  display: flex;
+  gap: var(--space-6);
+  flex-wrap: wrap;
+}
+
+.links a {
+  min-height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  font-weight: 600;
+  text-decoration: none;
+  color: var(--ink-inverse);
+  border-bottom: 1px solid transparent;
+  transition: border-color var(--motion-state) var(--ease-out);
+}
+
+.links a:hover {
+  border-color: currentColor;
+}
+
+.built {
+  max-width: 38ch;
+  font-size: var(--text-body-small-size);
+  line-height: var(--text-body-small-height);
+  color: color-mix(in srgb, var(--ink-inverse) 58%, transparent);
+  text-wrap: pretty;
+}
+
+/*
+ * The wordmark as a closing full stop — clipped by the footer so it reads as bigger than the
+ * page rather than as a heading that happens to be large. Purely decorative, hence aria-hidden.
+ */
+.wordmark {
+  font-family: var(--font-sora), sans-serif;
+  font-size: clamp(5rem, 22vw, 20rem);
+  font-weight: 800;
+  letter-spacing: -0.06em;
+  line-height: 0.78;
+  margin-bottom: -0.16em;
+  color: color-mix(in srgb, var(--ink-inverse) 12%, transparent);
+  user-select: none;
+}

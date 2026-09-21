@@ -1,0 +1,194 @@
+.hero {
+  position: relative;
+  min-height: 100svh;
+  display: grid;
+  align-items: center;
+  padding-block: clamp(6rem, 13vh, 9rem) clamp(5rem, 11vh, 7rem);
+  overflow: clip;
+
+  /*
+   * The three brand hues as light rather than shapes. Radial gradients at very low alpha over
+   * cream read as a lit room; the same hues as blobs read as a crypto landing page, which is
+   * the exact register the app's voice avoids.
+   */
+  background:
+    radial-gradient(60rem 40rem at 10% 16%, color-mix(in oklab, var(--kiwi) 20%, transparent), transparent 62%),
+    radial-gradient(46rem 36rem at 92% 6%, color-mix(in oklab, var(--grape) 15%, transparent), transparent 60%),
+    radial-gradient(
+      52rem 42rem at 74% 96%,
+      color-mix(in oklab, var(--coral) 13%, transparent),
+      transparent 62%
+    ),
+    var(--background);
+}
+
+.inner {
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.85fr);
+  align-items: center;
+  gap: clamp(2rem, 5vw, 5rem);
+}
+
+@media (width < 60rem) {
+  .inner {
+    grid-template-columns: minmax(0, 1fr);
+    gap: clamp(2.5rem, 8vh, 4rem);
+  }
+}
+
+.copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-5);
+  max-width: 34rem;
+  will-change: transform;
+}
+
+.wordmark {
+  font-family: var(--font-sora), ui-sans-serif, system-ui, sans-serif;
+  font-weight: 800;
+  font-size: var(--text-label-size);
+  letter-spacing: 0.34em;
+  text-indent: 0.34em;
+  color: var(--ink-muted);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+  margin-top: var(--space-3);
+}
+
+.cta,
+.ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 3rem;
+  padding-inline: var(--space-7);
+  border-radius: var(--radius-pill);
+  font-weight: 600;
+  text-decoration: none;
+  transition:
+    scale var(--motion-state) var(--ease-out),
+    background var(--motion-state) var(--ease-out),
+    border-color var(--motion-state) var(--ease-out);
+}
+
+.cta {
+  background: var(--ink);
+  color: var(--ink-inverse);
+}
+
+.cta:hover {
+  background: var(--kiwi-deep);
+}
+
+.ghost {
+  border: 1px solid var(--hairline-strong);
+  color: var(--ink);
+}
+
+.ghost:hover {
+  border-color: var(--ink);
+}
+
+/* The app presses everything to 0.97 — the site should feel like the same object. */
+.cta:active,
+.ghost:active {
+  scale: 0.97;
+}
+
+/* ─── Stage ─────────────────────────────────────────────────────────────────────────────── */
+
+.stage {
+  position: relative;
+  display: grid;
+  place-items: center;
+  justify-self: center;
+  will-change: transform;
+}
+
+.rings {
+  width: clamp(15rem, 30vw, 23.75rem);
+  height: auto;
+  filter: drop-shadow(0 24px 48px color-mix(in srgb, var(--shadow) 12%, transparent));
+}
+
+/*
+ * Two cards clipped to the ring's edge. They are placed off the ring rather than beside it
+ * so the composition has a front and a back — a row of three equal things would read as a
+ * feature list, which is what this section is trying not to be.
+ */
+.floatA,
+.floatB {
+  position: absolute;
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lifted);
+}
+
+.floatA {
+  flex-direction: column;
+  align-items: flex-start;
+  left: -8%;
+  top: 6%;
+  min-width: 11.5rem;
+}
+
+.floatB {
+  align-items: center;
+  right: -6%;
+  bottom: 8%;
+}
+
+@media (width < 30rem) {
+  .floatA {
+    left: -2%;
+  }
+  .floatB {
+    right: -2%;
+  }
+}
+
+.floatTitle {
+  font-family: var(--font-sora), sans-serif;
+  font-size: var(--text-subheading-size);
+  line-height: var(--text-subheading-height);
+  font-weight: 600;
+}
+
+.floatStat {
+  font-family: var(--font-sora), sans-serif;
+  font-size: var(--text-stat-small-size);
+  line-height: var(--text-stat-small-height);
+  letter-spacing: var(--text-stat-small-tracking);
+  font-weight: 700;
+}
+
+.floatMeta {
+  font-size: var(--text-caption-size);
+  line-height: var(--text-caption-height);
+  color: var(--ink-muted);
+}
+
+/* ─── Cue ───────────────────────────────────────────────────────────────────────────────── */
+
+.cue {
+  position: absolute;
+  bottom: clamp(1.5rem, 4vh, 2.75rem);
+  left: 50%;
+  translate: -50% 0;
+
+  font-size: var(--text-eyebrow-size);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--ink-muted);
+}

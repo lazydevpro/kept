@@ -1,0 +1,146 @@
+/**
+ * The market data behind §5.
+ *
+ * ── Two sources, deliberately treated differently ──
+ *
+ * **xStocks tick.** Jupiter's Price v3 is keyless and CORS-open — verified from the browser —
+ * so those six are fetched live on the client and the page shows a real price and a real 24h
+ * move. Mints below were resolved from Jupiter's token search, not typed from memory: the
+ * first draft of this file had `XsDoVfqe…` labelled SPYx when it is in fact Tesla.
+ *
+ * **Tessera does not tick.** Its API has no CORS headers, so a browser cannot reach it — but
+ * more to the point, its numbers are *mark* prices on loan participation rights, not a traded
+ * quote. Refreshing them every fifteen seconds would imply a liquidity that does not exist.
+ * They are captured here with an as-of date and labelled as marks, which is both the honest
+ * presentation and the more interesting one: the contrast between a ticking public market and
+ * a quarterly-marked private one is the point of having both on the shelf.
+ *
+ * ── Why this bypasses our own Worker ──
+ *
+ * docs/plans/landing-page.md §7 called for proxying through the Worker so the mint list lives
+ * in one place. Still the better shape, still blocked: `/v1/trades/*` sits behind
+ * `app.use("/v1/*", authenticated)` and there is no Cloudflare account to deploy a public
+ * route group to. Cost of going direct: this duplicates a list `backend/src/routes/trades.ts`
+ * already owns, and rate limiting is Jupiter's rather than ours. When the Worker is live,
+ * change `JUPITER_PRICE_URL` and nothing else in this file moves.
+ *
+ * ── Failure ──
+ *
+ * §9 criterion 7: a failed fetch shows the captured price and says it is stale. It never
+ * shows a spinner or an error to a first-time reader.
+ */
+
+const JUPITER_PRICE_URL = 'https://lite-api.jup.ag/price/v3'
+
+/** Captured 2026-09-21. Also the resting state before the fetch lands. */
+export const CAPTURED_ON = '21 September 2026'
+
+export type Listing = {
+  symbol: string
+  name: string
+  mint: string
+  capturedPrice: number
+}
+
+export const EQUITIES: Listing[] = [
+  {
+    symbol: 'SPYx',
+    name: 'S&P 500',
+    mint: 'XsoCS1TfEyfFhfvj8EtZ528L3CaKBDBRqRapnBbDF2W',
+    capturedPrice: 770.71,
+  },
+  {
+    symbol: 'QQQx',
+    name: 'Nasdaq 100',
+    mint: 'Xs8S1uUs1zvS2p7iwtsG3b6fkhpvmwz4GYU3gWAmWHZ',
+    capturedPrice: 738.21,
+  },
+  {
+    symbol: 'NVDAx',
+    name: 'NVIDIA',
+    mint: 'Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh',
+    capturedPrice: 225.48,
+  },
+  {
+    symbol: 'TSLAx',
+    name: 'Tesla',
+    mint: 'XsDoVfqeBukxuZHWhdvWHBhgEHjGNst4MLodqsJHzoB',
+    capturedPrice: 375.33,
+  },
+  { symbol: 'GLDx', name: 'Gold', mint: 'Xsv9hRk1z5ystj9MhnA7Lq4vjSsLwzL2nxrwmwtD3re', capturedPrice: 399.08 },
+  {
+    symbol: 'COINx',
+    name: 'Coinbase',
+    mint: 'Xs7ZdzSHLU9ftNJsii5fCeJhoRWSC32SQGzGQtePxNu',
+    capturedPrice: 202.34,
+  },
+]
+
+/** From `rest-api.tessera.pe/v1/public/token-details`, read server-side on the date above. */
+export const PRIVATE_MARKS = [
+  {
+    symbol: 'tOpenAI',
+    name: 'OpenAI',
+    sector: 'Artificial intelligence',
+    mark: 812.79,
+    holders: 8259,
+    valuation: '$950B',
+  },
+  { symbol: 'tSpaceX', name: 'SpaceX', sector: 'Aerospace', mark: 423.0, holders: 1274, valuation: '$800B' },
+  {
+    symbol: 'tKalshi',
+    name: 'Kalshi',
+    sector: 'Prediction markets',
+    mark: 413.8,
+    holders: 2605,
+    valuation: '$14B',
+  },
+] as const
+
+export type Quote = {
+  symbol: string
+  name: string
+  price: number
+  change24h: number | null
+  stale: boolean
+}
+
+type JupiterRecord = { usdPrice?: number; priceChange24h?: number }
+
+export async function fetchQuotes(signal?: AbortSignal): Promise<Quote[]> {
+  const stale = (listing: Listing): Quote => ({
+    symbol: listing.symbol,
+    name: listing.name,
+    price: listing.capturedPrice,
+    change24h: null,
+    stale: true,
+  })
+
+  try {
+    const ids = EQUITIES.map((l) => l.mint).join(',')
+    const response = await fetch(`${JUPITER_PRICE_URL}?ids=${ids}`, { signal })
+    if (!response.ok) return EQUITIES.map(stale)
+    const body = (await response.json()) as Record<string, JupiterRecord>
+
+    return EQUITIES.map((listing) => {
+      const record = body[listing.mint]
+      if (!record || typeof record.usdPrice !== 'number') return stale(listing)
+      return {
+        symbol: listing.symbol,
+        name: listing.name,
+        price: record.usdPrice,
+        change24h: typeof record.priceChange24h === 'number' ? record.priceChange24h : null,
+        stale: false,
+      }
+    })
+  } catch {
+    return EQUITIES.map(stale)
+  }
+}
+
+export const money = (value: number) =>
+  value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+
+/** Four significant figures is enough to see the amount move without implying false precision. */
+export const units = (value: number) =>
+  value < 1 ? value.toFixed(4) : value.toLocaleString('en-US', { maximumFractionDigits: 3 })

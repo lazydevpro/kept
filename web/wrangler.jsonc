@@ -1,0 +1,22 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "kept-web",
+  "compatibility_date": "2026-08-18",
+
+  /*
+   * Assets-only: no `main`, so there is no Worker script and nothing to invoke per request —
+   * Cloudflare serves `out/` straight from the edge. `npm run build` produces that directory.
+   *
+   * `single-page-application` would be wrong here. This is a static export with real HTML per
+   * route, so a bad URL should 404 rather than silently render the landing page.
+   */
+  "assets": {
+    "directory": "./out",
+    "not_found_handling": "404-page",
+    "html_handling": "auto-trailing-slash",
+  },
+
+  "workers_dev": false,
+  "preview_urls": false,
+  "observability": { "enabled": true },
+}

@@ -1,0 +1,222 @@
+.section {
+  padding-block: clamp(5rem, 14vh, 9rem);
+  background: var(--background);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: center;
+  gap: clamp(2.5rem, 6vw, 5rem);
+}
+
+@media (width < 60rem) {
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.copy {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-width: 32rem;
+}
+
+/* ─── Switch ────────────────────────────────────────────────────────────────────────────── */
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.toggleLabel {
+  font-size: var(--text-caption-size);
+  color: var(--ink-muted);
+}
+
+.switch {
+  display: inline-flex;
+  padding: 4px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--hairline-strong);
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.switchOption {
+  border: 0;
+  background: none;
+  cursor: pointer;
+  font-family: inherit;
+  min-height: 2.5rem;
+  display: inline-flex;
+  align-items: center;
+  padding-inline: var(--space-5);
+  border-radius: var(--radius-pill);
+  font-size: var(--text-label-size);
+  font-weight: 600;
+  color: var(--ink-muted);
+  transition:
+    background var(--motion-state) var(--ease-out),
+    color var(--motion-state) var(--ease-out);
+}
+
+.switchOption[aria-pressed='true'] {
+  background: var(--ink);
+  color: var(--ink-inverse);
+}
+
+.switch:active {
+  scale: 0.99;
+}
+
+/* ─── Card ──────────────────────────────────────────────────────────────────────────────── */
+
+.stage {
+  position: relative;
+  justify-self: center;
+  width: 100%;
+  max-width: 28rem;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  box-shadow: var(--shadow-lifted);
+  /* Measured: owner 408px, circle 470px. Losing three rows is mostly paid for by the ring
+     growing, so the residual is 62px — enough to notice, not enough to pin a height for.
+     The floor just stops the owner view from collapsing further on a narrow column. */
+  min-height: 24rem;
+}
+
+/*
+ * Two compositions of the same header.
+ *
+ * Owner view is a row — small ring, name, chip — because the rows below are the content.
+ * Circle view is a column with the ring centred and large, because once the private rows are
+ * gone the ring *is* the content and a 64px glyph next to two lines of text would leave the
+ * card looking like something had been deleted from it. Which it had.
+ */
+.cardHead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.cardWho {
+  flex: 1;
+}
+
+.card[data-view='circle'] .cardHead {
+  flex-direction: column;
+  gap: var(--space-4);
+  padding-block: var(--space-4) var(--space-2);
+}
+
+.card[data-view='circle'] .cardWho {
+  flex: none;
+  text-align: center;
+}
+
+/* No width transition: React swaps the whole SVG for one with different geometry, so there
+   is nothing for CSS to interpolate between — and tweening the box would just squash the
+   arcs on the way. The swap is instant on purpose. */
+.cardRing {
+  flex: none;
+}
+
+.cardName {
+  font-family: var(--font-sora), sans-serif;
+  font-size: var(--text-subheading-size);
+  font-weight: 600;
+}
+
+.card[data-view='circle'] .cardName {
+  font-size: var(--text-heading-size);
+}
+
+.cardWeek {
+  font-size: var(--text-caption-size);
+  color: var(--ink-muted);
+}
+
+.figures {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.figures > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--hairline);
+}
+
+.figures > div:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.figures dt {
+  font-size: var(--text-body-small-size);
+  color: var(--ink-muted);
+}
+
+.figures dd {
+  margin: 0;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * The private rows carry a quiet "only you" tag in the owner's view, so it is obvious which
+ * three vanish when the switch flips rather than leaving the reader to diff two screens.
+ */
+.privateRow dt {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.onlyYou {
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--grape-tint);
+  color: var(--grape-deep);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.note {
+  font-size: var(--text-body-small-size);
+  line-height: var(--text-body-small-height);
+  color: var(--ink-muted);
+  min-height: 2.5em;
+  text-wrap: pretty;
+}
+
+.shield {
+  position: absolute;
+  right: -1.5rem;
+  bottom: -2rem;
+  pointer-events: none;
+}
+
+@media (width < 30rem) {
+  .shield {
+    right: -0.5rem;
+    bottom: -1.5rem;
+  }
+}

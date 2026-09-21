@@ -1,0 +1,172 @@
+/* ─── Card ──────────────────────────────────────────────────────────────────────────────── */
+
+.card {
+  background: var(--surface);
+  border-radius: var(--radius-xl);
+  padding: var(--space-6);
+  box-shadow: var(--shadow-card);
+}
+
+/* Flat cards sit *inside* something already lifted — stacking two shadows reads as fog. */
+.flat {
+  box-shadow: none;
+  background: var(--surface-sunken);
+}
+
+.kiwi {
+  background: var(--kiwi-tint);
+}
+.grape {
+  background: var(--grape-tint);
+}
+.coral {
+  background: var(--coral-tint);
+}
+.sky {
+  background: var(--sky-tint);
+}
+.sun {
+  background: var(--sun-tint);
+}
+.neutral {
+  background: var(--surface-sunken);
+}
+
+/* ─── Chip ──────────────────────────────────────────────────────────────────────────────── */
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 5px var(--space-3);
+  border-radius: var(--radius-pill);
+  font-size: var(--text-caption-size);
+  line-height: var(--text-caption-height);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.chip_kiwi {
+  background: var(--kiwi-tint);
+  color: var(--kiwi-deep);
+}
+.chip_grape {
+  background: var(--grape-tint);
+  color: var(--grape-deep);
+}
+/*
+ * Coral is the one tone whose `*Deep` is not dark enough for its own tint: measured,
+ * `--coral-deep` on `--coral-tint` is 3.96:1, under the 4.5:1 floor for text this size. The
+ * others clear it (kiwi 4.61, grape 5.61, sky 5.29, sun 4.56, neutral 5.78).
+ *
+ * Mixed toward ink rather than replaced with a new hex, so it stays derived from the app's
+ * palette. 80/20 in sRGB measures 5.09:1 and is visibly the same red.
+ */
+.chip_coral {
+  background: var(--coral-tint);
+  color: color-mix(in srgb, var(--coral-deep) 80%, var(--ink));
+}
+.chip_sky {
+  background: var(--sky-tint);
+  color: var(--sky-deep);
+}
+.chip_sun {
+  background: var(--sun-tint);
+  color: var(--sun-deep);
+}
+.chip_neutral {
+  background: var(--surface-sunken);
+  color: var(--ink-muted);
+}
+
+/* ─── Stat ──────────────────────────────────────────────────────────────────────────────── */
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.statValue {
+  font-family: var(--font-sora), sans-serif;
+  font-size: var(--text-stat-size);
+  line-height: var(--text-stat-height);
+  letter-spacing: var(--text-stat-tracking);
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.statCaption {
+  font-size: var(--text-caption-size);
+  line-height: var(--text-caption-height);
+  color: var(--ink-muted);
+}
+
+/* ─── 3D objects ────────────────────────────────────────────────────────────────────────── */
+
+.object {
+  /* The source renders carry their own soft cast shadow, so they need no CSS one — adding a
+     second shadow is what makes these read as stickers pasted onto the card. */
+  object-fit: contain;
+  user-select: none;
+}
+
+.objectDim {
+  opacity: 0.32;
+  filter: grayscale(0.55);
+}
+
+.spot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+
+.spot_kiwi {
+  background: var(--kiwi-tint);
+}
+.spot_grape {
+  background: var(--grape-tint);
+}
+.spot_coral {
+  background: var(--coral-tint);
+}
+.spot_sky {
+  background: var(--sky-tint);
+}
+.spot_sun {
+  background: var(--sun-tint);
+}
+.spot_neutral {
+  background: var(--surface-sunken);
+}
+
+/* ─── Device ────────────────────────────────────────────────────────────────────────────── */
+
+.device {
+  --bezel: 10px;
+
+  position: relative;
+  width: 300px;
+  max-width: 100%;
+  aspect-ratio: 9 / 19;
+  padding: var(--bezel);
+  border-radius: 42px;
+  background: linear-gradient(160deg, #2b2f26, #0b0f0a 60%);
+  box-shadow:
+    0 2px 0 rgb(255 255 255 / 0.14) inset,
+    var(--shadow-lifted);
+}
+
+.deviceScreen {
+  width: 100%;
+  height: 100%;
+  border-radius: 32px;
+  background: var(--background);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+}

@@ -209,6 +209,71 @@ room — a reaction posted over HTTP arrives on the socket as `reaction.added`.
       forbid and drop. The shim is now in-memory so a token cannot be left behind even if
       that changes upstream; verified the session survives a full reload #security
 
+## Next — launch films #marketing
+
+Scripts and storyboards written: [docs/launch-film.md](docs/launch-film.md). Four pieces —
+teaser, 90s hero film, 60s product film, cutdowns. Three rules govern all of them: no numbers,
+no screens until the last five seconds, and the three missed weeks stay in.
+
+- [ ] Approve the on-screen copy (§6 of the doc — every word in one place) #marketing
+- [ ] Find a director and a composer. The score is the commission that matters: the whole
+      arrangement is fifty-two recordings of one ceramic cup on a wooden table, one pitch per
+      cast member. If that gets value-engineered away the film loses the thing people would
+      remember #marketing
+- [ ] Decide whether the app's confirmation sound becomes the film's cup sound — they should
+      be the same recording, not merely similar #marketing #design
+- [ ] Product film can be rendered rather than shot: `web/components/rings.tsx` and
+      `web/lib/year.ts` already hold the real geometry and the 52-week dataset, so a Remotion
+      build would be the product rather than a mockup of it #marketing #web
+
+## Next — the landing page #web
+
+Spec agreed: [docs/plans/landing-page.md](docs/plans/landing-page.md). Concept is **scroll is
+time** — scrolling the page lives a year of the habit. Reference the user brought was
+[gokiwi.in](https://gokiwi.in); its recipe is torn down in §3 of the spec.
+
+- [x] Phase 1 — `web/` workspace stands up. Next.js 16 static export, wrangler configured for
+      Workers Assets, tokens generated from `mobile/constants/theme.ts` (35 colours, 12 type
+      styles) into `app/tokens.css` + `lib/tokens.generated.ts`, Sora + Inter + Instrument
+      Serif self-hosted through `next/font`, Lenis wired into GSAP's ticker, and every scroll
+      section gated behind `useScrollScene`. Measured on the built output served through
+      wrangler: **Performance 99, Accessibility 100, Best Practices 100, SEO 100, 289 KB
+      transferred, CLS 0** on throttled mobile. `npm run check:motion` proves criteria 4 and 5
+      against a real browser with the media feature emulated both ways. Not deployed — no
+      Cloudflare account, so `npm run deploy` is guarded the same way the backend's is #web
+- [ ] `--ink-faint` fails WCAG AA as a text colour on light surfaces — measured **3.10:1** on
+      `background` and **3.22:1** on `surface`, against a 4.5:1 floor. It is fine on
+      `surfaceInverse` (6.00:1). The site now uses `--ink-muted` (6.17 / 6.41) for quiet text,
+      but **the app has the same pairing**: `role="caption"` with `colors.inkFaint` on white
+      cards, in `app/awards.tsx` and elsewhere. Either darken `inkFaint` in the palette or stop
+      using it for text — a palette change touches every screen, so it wants a deliberate pass
+      rather than a drive-by #design #a11y
+- [x] Phases 2–5 — **all nine sections built**, 14 screens of scroll. Hero with the rings drawn
+      on load, the word-by-word manifesto, the 52-week centerpiece, how-it-works, the live
+      market, the privacy toggle, the 12 awards and the home-screen widget. Product UI is
+      rebuilt as live HTML from the generated tokens rather than screenshotted #web
+- [x] Phase 3 detail — ring geometry **ported** from `mobile/features/progress/rings.tsx`, not
+      re-derived: same `width = size * 0.105`, same per-angle segment colouring, same cap
+      shadow. Driven imperatively through a ref so a scrub does not re-render 180 paths a
+      frame. Every figure on screen comes from one dataset in `web/lib/year.ts`, so the beats,
+      the bar strip, the running total and the streak cannot contradict each other #web
+- [x] Phase 5 — prices are **live**, but not through our Worker. Jupiter Price v3 is keyless
+      and CORS-open, so `web/lib/prices.ts` calls it from the browser. Tessera has no CORS and
+      quotes *marks* rather than ticks, so those three are captured with an as-of date and
+      labelled as marks. Mints were resolved from Jupiter's token search, not memory — the
+      first draft had `XsDoVfqe…` labelled SPYx when it is Tesla #web
+- [ ] Backend public read group — still wanted, now as cleanup rather than a blocker.
+      `/v1/trades/quote` and `/v1/trades/asset` sit under `app.use("/v1/*", authenticated)`
+      (`backend/src/app.ts:59`) so the site cannot use them, even though neither handler reads
+      `userId`. Mounting a public group above that middleware would put the mint list back in
+      one place and let us rate-limit it ourselves instead of leaning on Jupiter's
+      (`backend/src/app.ts:29-37` also pins CORS to a single `APP_ORIGIN`) #web #backend
+- [ ] Phase 6 — polish and optimise. Deferred deliberately: build first, optimise after.
+      Outstanding against §9: **Performance 94, one point under the 95 floor** (Accessibility,
+      Best Practices and SEO are all 100; 354 KB transferred, CLS 0; LCP 3.1s is the cost).
+      Then: convert the 3D PNGs to WebP, preloader, magnetic cursor, OG image, and a frame
+      trace of every pinned section #web
+
 ## Next
 
 - [ ] Integrate PreStocks, or decide not to — see

@@ -1,0 +1,72 @@
+.section {
+  /* Two and a half screens of scroll for four lines. The reference spends 2.6 on three. */
+  height: 250svh;
+  background: var(--background);
+}
+
+.viewport {
+  position: sticky;
+  top: 0;
+  height: 100svh;
+  display: grid;
+  align-items: center;
+}
+
+.copy {
+  font-family: var(--font-sora), ui-sans-serif, system-ui, sans-serif;
+  font-size: clamp(1.75rem, 0.9rem + 3.6vw, 4.25rem);
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 1.16;
+  max-width: 22ch;
+}
+
+.line {
+  display: block;
+}
+
+/*
+ * `--lit` runs 0 → 1 as the reader passes each word.
+ *
+ * It rests at 1 so the paragraph is fully readable before any script touches it — with motion
+ * off, or with JavaScript off, this is just a large well-set paragraph. The scroll handler
+ * sets it to 0 first and lights it back up.
+ *
+ * `--ink-faint` is the *unlit* colour and that is fine: at 3.1:1 it is under the AA floor for
+ * text, but no word ever rests there. The resting state is `--ink` at 18.6:1.
+ */
+.word {
+  --lit: 1;
+
+  display: inline;
+  color: color-mix(in oklab, var(--ink) calc(var(--lit) * 100%), var(--ink-faint));
+}
+
+.word[data-tone='kiwi'] {
+  color: color-mix(in oklab, var(--kiwi-deep) calc(var(--lit) * 100%), var(--ink-faint));
+}
+
+.word[data-tone='grape'] {
+  color: color-mix(in oklab, var(--grape-deep) calc(var(--lit) * 100%), var(--ink-faint));
+}
+
+.word[data-tone='coral'] {
+  color: color-mix(in oklab, var(--coral-deep) calc(var(--lit) * 100%), var(--ink-faint));
+}
+
+/*
+ * With motion off nothing lights the words, so a 250svh sticky section would be two and a half
+ * screens of the same still paragraph before the page moved on. Collapse it to its natural
+ * height and let the paragraph be a paragraph.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .section {
+    height: auto;
+    padding-block: clamp(5rem, 16vh, 9rem);
+  }
+
+  .viewport {
+    position: static;
+    height: auto;
+  }
+}
