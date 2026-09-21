@@ -491,6 +491,93 @@ tradeRoutes.get("/asset", async (c) => {
 });
 
 /**
+ * Price history for one asset, as a plain line.
+ *
+ * The asset endpoint above answers "what is it worth and which way has it moved",
+ * but only as four change figures — there was no series behind them, so the buy
+ * ticket had nothing to draw. Jupiter's chart API carries OHLCV for any mint it
+ * routes, needs no key, and is the same source the swap quote comes from.
+ *
+ * Only the close is kept. This is a line, deliberately: the product is a weekly
+ * habit, not a trading terminal, and candles would invite reading a wick.
+ */
+const JUPITER_CHART_URL = "https://datapi.jup.ag/v2/charts";
+
+/**
+ * Each range picks an interval fine enough to look alive and coarse enough that one
+ * request covers the whole window.
+ */
+const CHART_RANGES = {
+  "1D": { interval: "15_MINUTE", candles: 96 },
+  "1W": { interval: "1_HOUR", candles: 168 },
+  "1M": { interval: "4_HOUR", candles: 180 },
+  "1Y": { interval: "1_DAY", candles: 365 },
+} as const;
+
+type ChartRange = keyof typeof CHART_RANGES;
+
+type JupiterCandle = { time?: number; close?: number };
+
+const CHART_TTL_MS = 60 * 1000;
+const chartCache = new Map<string, { at: number; points: { t: number; p: number }[] }>();
+
+tradeRoutes.get("/chart", async (c) => {
+  const mint = (c.req.query("mint") ?? "").trim();
+  if (!mint) throw new ApiError(400, "A mint is required.");
+
+  const requested = (c.req.query("range") ?? "1M").toUpperCase();
+  if (!(requested in CHART_RANGES))
+    throw new ApiError(422, "Unknown range. Use 1D, 1W, 1M or 1Y.");
+  const range = requested as ChartRange;
+  const { interval, candles } = CHART_RANGES[range];
+
+  const key = `${mint}:${range}`;
+  const cached = chartCache.get(key);
+  let points = cached && Date.now() - cached.at < CHART_TTL_MS ? cached.points : null;
+
+  if (!points) {
+    const url = `${JUPITER_CHART_URL}/${encodeURIComponent(mint)}?${new URLSearchParams({
+      interval,
+      to: String(Date.now()),
+      candles: String(candles),
+    }).toString()}`;
+    try {
+      const response = await fetch(url, { signal: AbortSignal.timeout(6000) });
+      if (!response.ok) throw new Error(String(response.status));
+      const payload = (await response.json()) as { candles?: JupiterCandle[] };
+      points = (payload.candles ?? [])
+        .filter(
+          (candle): candle is { time: number; close: number } =>
+            typeof candle.time === "number" && typeof candle.close === "number",
+        )
+        .map((candle) => ({ t: candle.time, p: candle.close }));
+      chartCache.set(key, { at: Date.now(), points });
+    } catch {
+      // A chart is a nice-to-have on a buy screen. Failing the whole request would
+      // take the price and the amount field down with it, so this answers empty and
+      // lets the client say it has no history rather than that something broke.
+      points = [];
+    }
+  }
+
+  // Thinly traded mints genuinely have no history — Jupiter returns an empty array
+  // for them — so "no points" is a real answer, not an error.
+  const first = points.at(0)?.p ?? null;
+  const last = points.at(-1)?.p ?? null;
+
+  return c.json({
+    chart: {
+      mint,
+      range,
+      points,
+      first,
+      last,
+      changePct: first !== null && last !== null && first !== 0 ? ((last - first) / first) * 100 : null,
+    },
+  });
+});
+
+/**
  * A preview quote: what a given amount of USDC actually buys, right now.
  *
  * Deliberately not `/order`. That one persists a row and demands a verified

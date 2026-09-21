@@ -17,6 +17,28 @@ function encodeBase64Url(bytes: Uint8Array) {
     .replaceAll("=", "");
 }
 
+/**
+ * Invite tokens are the longest part of a link someone has to send a friend, and the
+ * old ones were two concatenated UUIDs — 64 characters for an invite that lives 72 hours
+ * and admits at most 20 people. Twelve characters of this alphabet is 72 bits, which is
+ * not guessable at any rate a circle invite will ever see.
+ *
+ * The alphabet is exactly 64 characters, so every byte maps to one character with no
+ * modulo bias. Tokens are only ever stored hashed, so shortening them needs no migration
+ * and links already in someone's messages keep working.
+ */
+const TOKEN_ALPHABET =
+  "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+const TOKEN_LENGTH = 12;
+
+function inviteToken() {
+  const bytes = crypto.getRandomValues(new Uint8Array(TOKEN_LENGTH));
+  return Array.from(
+    bytes,
+    (byte) => TOKEN_ALPHABET[byte % TOKEN_ALPHABET.length],
+  ).join("");
+}
+
 function decodeBase64Url(value: string) {
   const base64 = value.replaceAll("-", "+").replaceAll("_", "/");
   return Uint8Array.from(
@@ -166,9 +188,7 @@ circleRoutes.post("/:circleId/invites", async (c) => {
       maxUses: z.number().int().min(1).max(20).default(5),
     }),
   );
-  const token =
-    crypto.randomUUID().replaceAll("-", "") +
-    crypto.randomUUID().replaceAll("-", "");
+  const token = inviteToken();
   const inviteId = id("invite");
   const expiresAt = new Date(
     Date.now() + body.expiresInHours * 3_600_000,

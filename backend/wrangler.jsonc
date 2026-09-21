@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "neon-reserve-api",
+  "name": "kept-api",
   "main": "src/index.ts",
   "compatibility_date": "2026-08-18",
   "compatibility_flags": ["nodejs_compat"],
@@ -12,7 +12,7 @@
     "APP_ORIGIN": "neonreserve://",
     "SOLANA_CLUSTER": "devnet",
     "SOLANA_RPC_URL": "https://api.devnet.solana.com",
-    "PUBLIC_APP_URL": "http://127.0.0.1:8082",
+    "PUBLIC_APP_URL": "https://kept.lazydevpro.workers.dev",
   },
   "d1_databases": [
     {
@@ -37,13 +37,13 @@
   "triggers": { "crons": ["15 1 * * *"] },
   "env": {
     "staging": {
-      "name": "neon-reserve-api-staging",
+      "name": "kept-api-staging",
       "workers_dev": true,
       "preview_urls": true,
       "vars": {
         "ENVIRONMENT": "staging",
-        "APP_ORIGIN": "https://neon-reserve-web.lazydevpro.workers.dev",
-        "PUBLIC_APP_URL": "https://neon-reserve-web.lazydevpro.workers.dev",
+        "APP_ORIGIN": "https://kept.lazydevpro.workers.dev",
+        "PUBLIC_APP_URL": "https://kept.lazydevpro.workers.dev",
         "SOLANA_CLUSTER": "devnet",
         "SOLANA_RPC_URL": "https://api.devnet.solana.com"
       },

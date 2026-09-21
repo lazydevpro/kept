@@ -45,7 +45,11 @@ walletRoutes.post("/verify", async (c) => {
     c,
     z.object({
       challengeId: z.string().min(8),
-      signature: z.string().min(40).max(256),
+      // Mobile Wallet Adapter hands back the SIGNED PAYLOAD — the challenge message with
+      // the 64-byte signature appended — not a bare signature. That is ~376 base64
+      // characters for our message, so a 256 cap rejected every real wallet before the
+      // verification below ever ran, and the handler's own slice(-64) was unreachable.
+      signature: z.string().min(40).max(2048),
     }),
   );
   const challenge = await c.env.DB.prepare(
@@ -59,25 +63,41 @@ walletRoutes.post("/verify", async (c) => {
       "This wallet challenge expired. Request a new one.",
     );
   }
-  let valid = false;
-  try {
-    const signedPayload = body.signature.includes("=")
-      ? Uint8Array.from(atob(body.signature), (character) =>
-          character.charCodeAt(0),
-        )
-      : bs58.decode(body.signature);
-    const message = new TextEncoder().encode(String(challenge.message));
-    const publicKey = bs58.decode(String(challenge.address));
-    const candidates =
-      signedPayload.length === 64
-        ? [signedPayload]
-        : [signedPayload.slice(0, 64), signedPayload.slice(-64)];
-    valid = candidates.some((signature) =>
-      ed25519.verify(signature, message, publicKey),
-    );
-  } catch {
-    valid = false;
-  }
+  // Base64 only carries "=" when the byte length is not a multiple of three, so picking
+  // the encoding by looking for padding sent unpadded base64 down the base58 path, where
+  // it either threw or decoded to nonsense. Decode both ways and let the signature check
+  // be the thing that decides.
+  const decoded = [
+    () =>
+      Uint8Array.from(atob(body.signature), (character) =>
+        character.charCodeAt(0),
+      ),
+    () => bs58.decode(body.signature),
+  ].flatMap((decode) => {
+    try {
+      return [decode()];
+    } catch {
+      return [];
+    }
+  });
+
+  const message = new TextEncoder().encode(String(challenge.message));
+  const publicKey = bs58.decode(String(challenge.address));
+  const valid = decoded
+    // A signed payload is the message with the signature appended; a bare signature is
+    // the 64 bytes on their own. Wallets return both shapes.
+    .flatMap((payload) =>
+      payload.length === 64
+        ? [payload]
+        : [payload.slice(0, 64), payload.slice(-64)],
+    )
+    .some((signature) => {
+      try {
+        return ed25519.verify(signature, message, publicKey);
+      } catch {
+        return false;
+      }
+    });
   if (!valid)
     throw new ApiError(422, "The wallet signature could not be verified.");
   const existing = await c.env.DB.prepare(
