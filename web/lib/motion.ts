@@ -45,15 +45,28 @@ export function useReducedMotion(): boolean {
  * readable state — never from `opacity: 0`, never from a value that hides content. If a
  * section is blank until GSAP touches it, it is blank forever for a reader with motion off,
  * and blank in the no-JS snapshot too.
+ *
+ * ── `when` ──
+ *
+ * An extra media query, ANDed onto the reduced-motion gate rather than replacing it, for a
+ * section that wants two different behaviours at two widths — the circle section scrubs on a
+ * wide screen and plays itself on a narrow one. Two `useMotionScene` calls with complementary
+ * `when` queries give GSAP the pair as one `matchMedia`, so switching between them at a
+ * resize reverts one scene and builds the other cleanly. Passing the queries here rather than
+ * branching inside `build` is what keeps that revert correct.
  */
 export function useMotionScene(
   build: (context: { gsap: typeof gsap; ScrollTrigger: typeof ScrollTrigger }) => void,
-  { scope, deps = [] }: { scope?: React.RefObject<HTMLElement | null>; deps?: unknown[] } = {},
+  {
+    scope,
+    deps = [],
+    when,
+  }: { scope?: React.RefObject<HTMLElement | null>; deps?: unknown[]; when?: string } = {},
 ): void {
   useGSAP(
     () => {
       const media = gsap.matchMedia()
-      media.add(FULL_MOTION, () => {
+      media.add(when ? `${FULL_MOTION} and ${when}` : FULL_MOTION, () => {
         build({ gsap, ScrollTrigger })
       })
       return () => media.revert()

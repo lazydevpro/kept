@@ -1,0 +1,276 @@
+/*
+ * The floating contact button and its modal.
+ *
+ * The button is the only fixed element on the page besides the scroll rail, so it is sized
+ * and placed to stay out of the way: bottom right, above the safe area, and it collapses to
+ * a circle on a narrow screen where horizontal room is the scarce thing.
+ */
+
+.fab {
+  position: fixed;
+  right: var(--gutter);
+  bottom: var(--gutter);
+  z-index: 40;
+
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 3rem;
+  padding-inline: var(--space-5);
+
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--ink);
+  color: var(--ink-inverse);
+  box-shadow: var(--shadow-lifted);
+
+  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  font-size: var(--text-label-size);
+  font-weight: 600;
+  cursor: pointer;
+
+  transition:
+    scale var(--motion-state) var(--ease-out),
+    background var(--motion-state) var(--ease-out);
+}
+
+.fab:hover {
+  scale: 1.03;
+}
+
+.fab:active {
+  scale: 0.97;
+}
+
+.fabMark {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: var(--radius-pill);
+  background: var(--kiwi);
+}
+
+@media (width < 34rem) {
+  .fab {
+    /* Icon-only below the point where the label would crowd the content. */
+    min-width: 3rem;
+    padding-inline: 0;
+    justify-content: center;
+    font-size: 0;
+    gap: 0;
+  }
+
+  .fabMark {
+    width: 0.75rem;
+    height: 0.75rem;
+  }
+}
+
+/* ─── The modal ─────────────────────────────────────────────────────────────────────────── */
+
+.dialog {
+  margin: auto;
+  padding: 0;
+  width: min(30rem, calc(100vw - 2 * var(--gutter)));
+  border: 0;
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-lifted);
+}
+
+.dialog::backdrop {
+  background: rgb(11 15 10 / 45%);
+  backdrop-filter: blur(3px);
+}
+
+.panel {
+  padding: clamp(var(--space-6), 4vw, var(--space-8));
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.heading {
+  font-family: var(--font-sora), ui-sans-serif, system-ui, sans-serif;
+  font-size: var(--text-title-size);
+  line-height: var(--text-title-height);
+  letter-spacing: var(--text-title-tracking);
+  font-weight: 700;
+  margin-top: var(--space-1);
+}
+
+.close {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--ink-muted);
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background var(--motion-state) var(--ease-out);
+}
+
+.close:hover {
+  background: var(--surface-sunken);
+}
+
+/* ─── Form ──────────────────────────────────────────────────────────────────────────────── */
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.field > span {
+  font-size: var(--text-label-size);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.field input,
+.field textarea {
+  font-family: inherit;
+  font-size: var(--text-body-size);
+  line-height: var(--text-body-height);
+  color: var(--ink);
+
+  /* An intrinsic width flex will not shrink is what pushes these out of a narrow panel. */
+  min-width: 0;
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+
+  background: var(--background);
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius-md);
+  transition: border-color var(--motion-state) var(--ease-out);
+}
+
+.field textarea {
+  resize: vertical;
+  min-height: 6rem;
+}
+
+.field input:focus-visible,
+.field textarea:focus-visible {
+  outline: 3px solid var(--grape);
+  outline-offset: 1px;
+  border-color: transparent;
+}
+
+/*
+ * The honeypot. Taken out of the layout entirely rather than `display: none` — some bots skip
+ * fields that are literally undisplayed, and this one is meant to be filled in.
+ */
+.trap {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.submit {
+  min-height: 3rem;
+  padding-inline: var(--space-6);
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--kiwi);
+  color: var(--ink);
+
+  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  font-size: var(--text-label-size);
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    scale var(--motion-state) var(--ease-out),
+    opacity var(--motion-state) var(--ease-out);
+}
+
+.submit:hover:not(:disabled) {
+  scale: 1.02;
+}
+
+.submit:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.error {
+  font-size: var(--text-body-small-size);
+  line-height: var(--text-body-small-height);
+  /* Coral means people elsewhere; this is the deep cut, which clears AA on the surface. */
+  color: var(--coral-deep);
+}
+
+/* ─── Sent ──────────────────────────────────────────────────────────────────────────────── */
+
+.done {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.doneTitle {
+  font-family: var(--font-sora), ui-sans-serif, system-ui, sans-serif;
+  font-size: var(--text-subheading-size);
+  font-weight: 700;
+}
+
+.doneBody {
+  font-size: var(--text-body-size);
+  line-height: var(--text-body-height);
+  color: var(--ink-muted);
+}
+
+.secondary {
+  margin-top: var(--space-2);
+  min-height: 2.75rem;
+  padding-inline: var(--space-5);
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: var(--text-label-size);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fab,
+  .submit,
+  .close {
+    transition: none;
+  }
+
+  .fab:hover,
+  .fab:active,
+  .submit:hover:not(:disabled) {
+    scale: 1;
+  }
+
+  .dialog::backdrop {
+    backdrop-filter: none;
+  }
+}

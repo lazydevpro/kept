@@ -209,6 +209,20 @@ room — a reaction posted over HTTP arrives on the socket as `reaction.added`.
       forbid and drop. The shim is now in-memory so a token cannot be left behind even if
       that changes upstream; verified the session survives a full reload #security
 
+## Next — the product film #marketing
+
+Planned: [docs/product-film.md](docs/product-film.md). ~52s, pure motion graphics, no footage.
+Builds in the existing `video/` workspace as a second composition set. The centre of it is
+scene 3 — week 6, the promise ring resetting while the money does not — which is the one
+mechanic no amount of copy lands.
+
+- [ ] Build `src/product/`, eight scene components plus a `RingWipe` transition and a
+      `Counter`. Reuses `Rings`, `year.ts`, `prices.ts` and the token file unchanged #marketing
+- [ ] Fetch prices at render time via `delayRender` + `calculateMetadata`, so every render
+      carries that day's real market data and the chip can honestly read `Live · <date>`
+      #marketing #web
+- [ ] Cut a 30s version — scenes 1, 3, 5, 8. Scene 3 survives every cut #marketing
+
 ## Next — launch films #marketing
 
 Scripts and storyboards written: [docs/launch-film.md](docs/launch-film.md). Four pieces —
@@ -268,9 +282,44 @@ time** — scrolling the page lives a year of the habit. Reference the user brou
       `userId`. Mounting a public group above that middleware would put the mint list back in
       one place and let us rate-limit it ourselves instead of leaning on Jupiter's
       (`backend/src/app.ts:29-37` also pins CORS to a single `APP_ORIGIN`) #web #backend
+- [x] **The circle section** — §10, between Privacy and Awards. One Friday evening scrubbed
+      across a pinned viewport: four people in a row, promise rings closing one at a time,
+      the app's own notifications stacking underneath, reactions popping onto each card, and
+      a nudge landing on *you* at 8:15pm. The coral ring was the only one of the three the
+      page never explained, because its value comes from other people doing something. Every
+      figure comes from one dataset (`web/lib/friday.ts`) and every notification is the
+      product's literal copy — the feed row the backend writes, and the two push payloads the
+      Worker sends #web
+- [x] Two behaviours, one painter. `useMotionScene` gained an optional `when` query ANDed onto
+      the reduced-motion gate; ≥72rem scrubs, <72rem autoplays on entry and pauses off-screen.
+      Verified both: autoplay walks 5:04pm → 9:40pm in 15s hitting every beat in order, and
+      stops when scrolled away #web
+- [x] The first layout put the four in a 2×2 with the stack floated over it, Muzzle-style. At
+      1024 **and** 1440 the stack landed on the second card and hid the ring it was announcing
+      — two elements competing for one column that was never wide enough. Separated onto the
+      axis with room: a row of four, notifications beneath #web
+- [x] **Contact — floating button, bottom right**, opening a native `<dialog>` (focus trap,
+      Escape and `::backdrop` for free) and posting to Discord #web
+- [x] The webhook does **not** go in the bundle. A Discord webhook URL *is* the credential —
+      shipped to the browser it is one "view source" from permanent spam, and rotating it means
+      a redeploy. `web/functions/api/contact.ts` is a Pages Function holding it as a secret.
+      Set it with `npx wrangler pages secret put DISCORD_WEBHOOK_URL`; unset, the route answers
+      503 and the form says so rather than failing silently #web #security
+- [x] `allowed_mentions: { parse: [] }` on the Discord payload, so a message containing
+      `@everyone` cannot ping the server. Stripping the text would be a filter to get around;
+      this is Discord refusing to resolve any mention at all #web #security
+- [x] Honeypot field, hidden from sight *and* from assistive tech (`aria-hidden` + `tabIndex=-1`)
+      — a screen-reader user tabbing into an invisible "Website" box would otherwise be flagged
+      as a bot by a form they cannot see. A caught bot gets a 200 and no delivery, because a 422
+      tells whoever wrote it which field gave them away #web
+- [ ] Rate-limit the contact route. Honeypot and length caps are in; there is no per-IP limit
+      because Pages Functions have no store bound here. Wants a KV namespace #web
 - [ ] Phase 6 — polish and optimise. Deferred deliberately: build first, optimise after.
-      Outstanding against §9: **Performance 94, one point under the 95 floor** (Accessibility,
-      Best Practices and SEO are all 100; 354 KB transferred, CLS 0; LCP 3.1s is the cost).
+      Outstanding against §9: **Performance 93, two points under the 95 floor** (Accessibility,
+      Best Practices and SEO are all 100; 367 KB transferred, CLS 0; LCP 3.2s is the cost).
+      Was 94 / 354 KB / 3.1s before the circle section — so that section cost one point and
+      13 KB. Measured three times to be sure: a single run on a loaded machine read 82, which
+      was contention, not the page.
       Then: convert the 3D PNGs to WebP, preloader, magnetic cursor, OG image, and a frame
       trace of every pinned section #web
 

@@ -1,0 +1,406 @@
+/*
+ * The circle section — one Friday evening, pinned.
+ *
+ * Two layouts rather than one responsive one. Above 72rem the viewport sticks and the reader
+ * scrubs the evening; below it the section is an ordinary block that plays itself. The
+ * breakpoint here and the `when` queries in `circle.tsx` are the same number on purpose — if
+ * one moves, the other has to.
+ *
+ * ── Why the stack floats above the people rather than beside them ──
+ *
+ * The first build put the four cards in a 2×2 and floated the notification stack over the
+ * right of it, Muzzle-style. At every width tried — 1024 and 1440 — the stack landed square
+ * on top of the second card and buried the exact thing it was announcing: you could read
+ * "Sam kept this week's promise" while Sam's ring was hidden behind the card saying so.
+ * The two elements were competing for one column and the column was never wide enough.
+ *
+ * So they are separated on the axis that has room: the four people stand in a row, and the
+ * notifications accumulate underneath them. Nothing overlaps anything, the people stay the
+ * subject and the cards read as commentary on them. A row of four also reads as *a group*
+ * more immediately than a 2×2 does, which is what the section is about.
+ *
+ * The stack never reflows the page as it fills, and gets no reserved height to make that
+ * true: hidden notes are `opacity: 0`, not `display: none`, so all six occupy their space
+ * from the first frame and the row above them never moves.
+ */
+
+.section {
+  /* Scroll room for the scrub. Below 72rem this collapses to `auto` (see the bottom). */
+  height: 260vh;
+  background: var(--surface-sunken);
+}
+
+.viewport {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  align-items: center;
+  gap: clamp(2.5rem, 6vw, 5rem);
+  width: 100%;
+}
+
+.copy {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-width: 32rem;
+}
+
+/* ─── Readout ───────────────────────────────────────────────────────────────────────────── */
+
+.readout {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-4);
+  margin-top: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.clock {
+  font-size: var(--text-stat-small-size);
+  letter-spacing: var(--text-stat-small-tracking);
+  font-weight: 700;
+  color: var(--ink);
+  /* Tabular figures: a clock that jitters horizontally as it counts is the cheapest tell. */
+  font-variant-numeric: tabular-nums;
+}
+
+.tally {
+  font-size: var(--text-label-size);
+  color: var(--ink-muted);
+}
+
+.tally .numeric {
+  color: var(--coral-deep);
+  font-weight: 700;
+}
+
+.punchline {
+  margin-top: var(--space-3);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--hairline);
+  font-size: var(--text-subheading-size);
+  line-height: var(--text-subheading-height);
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.punchline span {
+  display: block;
+  margin-top: var(--space-1);
+  font-size: var(--text-body-small-size);
+  line-height: var(--text-body-small-height);
+  font-weight: 400;
+  color: var(--ink-muted);
+}
+
+/* ─── Stage: the four across the top, the evening's notifications below ─────────────────── */
+
+.stage {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: var(--space-5);
+  min-height: 0;
+}
+
+.stack {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  /* Right-weighted, because a notification belongs at the edge of the screen, not centred. */
+  width: min(22rem, 100%);
+  margin-left: auto;
+  pointer-events: none;
+}
+
+.note {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-lifted);
+  transition:
+    opacity var(--motion-entrance) var(--ease-out),
+    translate var(--motion-entrance) var(--ease-out);
+}
+
+.note[data-shown='false'] {
+  opacity: 0;
+  translate: 0 -0.5rem;
+}
+
+.note[data-shown='true'] {
+  opacity: 1;
+  translate: 0 0;
+}
+
+/*
+ * Older cards dim rather than disappear, so the stack reads as a record of the evening rather
+ * than a carousel. With six notes, this catches the two the reader has already taken in.
+ */
+.note[data-shown='true']:nth-last-child(n + 5) {
+  opacity: 0.55;
+}
+
+.noteMark {
+  flex: none;
+  width: 1.5rem;
+  height: 1.5rem;
+  margin-top: 1px;
+  border-radius: var(--radius-plate);
+  background: var(--kiwi-tint);
+  border: 1px solid var(--kiwi);
+}
+
+.note[data-kind='reminder'] .noteMark {
+  background: var(--sky-tint);
+  border-color: var(--sky);
+}
+
+/* Coral, because a nudge is a person, and coral means people everywhere in this product. */
+.note[data-kind='nudge'] .noteMark {
+  background: var(--coral-tint);
+  border-color: var(--coral);
+}
+
+.noteText {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  font-size: var(--text-caption-size);
+  line-height: var(--text-caption-height);
+  color: var(--ink-muted);
+  min-width: 0;
+}
+
+.noteText strong {
+  font-family: var(--font-sora), ui-sans-serif, system-ui, sans-serif;
+  font-size: var(--text-label-size);
+  font-weight: 700;
+  color: var(--ink);
+}
+
+/* ─── The four ──────────────────────────────────────────────────────────────────────────── */
+
+.cluster {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  gap: clamp(var(--space-2), 1vw, var(--space-4));
+}
+
+.member {
+  /* Composed rather than overwritten: the stagger is layout, the lift is state, and both
+     land in one `translate` so neither can clobber the other. */
+  --stagger: 0px;
+  --lift: 0px;
+
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-4) var(--space-3);
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+  translate: 0 calc(var(--stagger) + var(--lift));
+  transition:
+    box-shadow var(--motion-entrance) var(--ease-out),
+    translate var(--motion-entrance) var(--ease-out);
+}
+
+/* A wave, so four cards read as people standing together rather than as a toolbar. */
+.cluster > li:nth-child(even) {
+  --stagger: clamp(0.75rem, 2vw, 1.5rem);
+}
+
+/* The lift when a promise lands. Small — it is a nod, not a celebration. */
+.member[data-kept='true'] {
+  --lift: -3px;
+  box-shadow: var(--shadow-lifted);
+}
+
+.member[data-you='true'] {
+  outline: 2px solid var(--kiwi);
+  outline-offset: -2px;
+}
+
+.memberRing {
+  display: block;
+}
+
+.memberName {
+  font-family: var(--font-sora), ui-sans-serif, system-ui, sans-serif;
+  font-size: var(--text-label-size);
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.memberState {
+  position: relative;
+  font-size: var(--text-caption-size);
+  line-height: var(--text-caption-height);
+  color: var(--ink-muted);
+}
+
+.member[data-kept='false'] .memberState {
+  visibility: hidden;
+}
+
+/*
+ * "Open" sits underneath and shows through when the promise has not landed, so the row never
+ * changes height as the state flips.
+ */
+.member[data-kept='false'] .memberState::after {
+  content: 'Open';
+  visibility: visible;
+  position: absolute;
+  inset-inline: 0;
+  text-align: center;
+  color: var(--ink-faint);
+}
+
+/* ─── Reactions ─────────────────────────────────────────────────────────────────────────── */
+
+.reactions {
+  position: absolute;
+  top: calc(var(--space-3) * -1);
+  inset-inline: 0;
+  display: flex;
+  justify-content: center;
+  gap: var(--space-1);
+  pointer-events: none;
+}
+
+.reaction {
+  display: grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  font-size: 0.8125rem;
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+  transition:
+    scale var(--motion-entrance) var(--ease-out),
+    opacity var(--motion-state) var(--ease-out);
+}
+
+.reaction[data-shown='false'] {
+  scale: 0.4;
+  opacity: 0;
+}
+
+.reaction[data-shown='true'] {
+  scale: 1;
+  opacity: 1;
+}
+
+/*
+ * Sits in the copy column, not spanning the foot of the grid. Full-width it stranded itself
+ * a couple of hundred pixels below everything else, which read as a layout bug rather than
+ * as a footnote.
+ */
+.disclaimer {
+  margin-top: var(--space-2);
+  font-size: var(--text-caption-size);
+  line-height: var(--text-caption-height);
+  color: var(--ink-muted);
+}
+
+/* ─── Unpinned: too narrow to pin, or too short to pin ─────────────────────────── */
+
+/*
+ * The height half of this is not a nicety. A pinned viewport is exactly 100vh with
+ * `overflow: hidden`, so on a short window the stage is simply cut off — which is what
+ * happened: the top of the member cards was sliced away mid-card, with no scrollbar to
+ * suggest anything was missing. Compacting the section took it from 778px to ~608px, which
+ * moved the failure down to roughly a 610px window rather than removing it.
+ *
+ * So below 42rem of height the section stops pinning and becomes an ordinary block that
+ * plays itself. Nothing is clipped at any window size.
+ */
+@media (width < 72rem), (height < 42rem) {
+  .section {
+    height: auto;
+    padding-block: clamp(4rem, 12vh, 7rem);
+  }
+
+  .viewport {
+    position: static;
+    height: auto;
+    overflow: visible;
+  }
+}
+
+/* Narrow only — a short *wide* window keeps the row of four, because it has the width. */
+@media (width < 72rem) {
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .stage {
+    gap: var(--space-8);
+  }
+
+  .stack {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  /* Four across is too thin on a phone; 2×2 keeps the ring legible. */
+  .cluster {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-4);
+  }
+
+  .cluster > li:nth-child(even) {
+    --stagger: 0px;
+  }
+}
+
+/* ─── Reduced motion: the evening, already over ─────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .section {
+    height: auto;
+    padding-block: clamp(4rem, 12vh, 7rem);
+  }
+
+  .viewport {
+    position: static;
+    height: auto;
+    overflow: visible;
+  }
+
+  /* Everything rests shown, and nothing transitions into it. */
+  .member,
+  .note,
+  .reaction {
+    transition: none;
+  }
+
+  .note[data-shown='true']:nth-last-child(n + 5) {
+    opacity: 1;
+  }
+}
