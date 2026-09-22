@@ -1,7 +1,7 @@
 'use client'
 
 import { forwardRef, useId, useImperativeHandle, useMemo, useRef } from 'react'
-import { lightColors } from '@/lib/tokens.generated'
+import { lightColors, darkColors } from '@/lib/tokens.generated'
 
 /**
  * The KEPT rings, ported from `mobile/features/progress/rings.tsx`.
@@ -35,10 +35,28 @@ import { lightColors } from '@/lib/tokens.generated'
 export type RingKey = 'promise' | 'goal' | 'circle'
 export type RingValues = Record<RingKey, number>
 
-const TONES: Record<RingKey, { from: string; to: string; track: string }> = {
-  promise: { from: lightColors.ringPromiseFrom, to: lightColors.ringPromiseTo, track: lightColors.trackKiwi },
-  goal: { from: lightColors.ringGoalFrom, to: lightColors.ringGoalTo, track: lightColors.trackGrape },
-  circle: { from: lightColors.ringCircleFrom, to: lightColors.ringCircleTo, track: lightColors.trackCoral },
+export type RingMode = 'light' | 'dark'
+
+/**
+ * Both palettes, because the track colours are not a tint of the arc — they are drawn
+ * separately for each mode. The app's own note on the dark set: "on a near-black card the
+ * tracks need more chroma and less red, or the three of them blend into one brown target."
+ *
+ * The site only ever renders light, so this component hardcoded `lightColors` until the
+ * launch film needed rings on ink and got three pale bands that read as *full* rather than
+ * empty. `mode` defaults to light, so nothing on the site changes.
+ */
+const TONES: Record<RingMode, Record<RingKey, { from: string; to: string; track: string }>> = {
+  light: {
+    promise: { from: lightColors.ringPromiseFrom, to: lightColors.ringPromiseTo, track: lightColors.trackKiwi },
+    goal: { from: lightColors.ringGoalFrom, to: lightColors.ringGoalTo, track: lightColors.trackGrape },
+    circle: { from: lightColors.ringCircleFrom, to: lightColors.ringCircleTo, track: lightColors.trackCoral },
+  },
+  dark: {
+    promise: { from: darkColors.ringPromiseFrom, to: darkColors.ringPromiseTo, track: darkColors.trackKiwi },
+    goal: { from: darkColors.ringGoalFrom, to: darkColors.ringGoalTo, track: darkColors.trackGrape },
+    circle: { from: darkColors.ringCircleFrom, to: darkColors.ringCircleTo, track: darkColors.trackCoral },
+  },
 }
 
 const ORDER: RingKey[] = ['promise', 'goal', 'circle']
@@ -79,18 +97,37 @@ type Props = Partial<RingValues> & {
   size?: number
   /** Coarser segments for small glyphs — 180 paths per avatar is not worth the fidelity. */
   detail?: 'full' | 'glyph'
+  /**
+   * Which of the three to draw. All of them unless you say otherwise.
+   *
+   * Three concentric bands need room. Below roughly 120px the stroke and gap maths leaves a
+   * hole about a quarter of the diameter, and three differently-filled arcs in that space
+   * stop reading as progress and start reading as a smudge — which is exactly what happened
+   * to the circle section's member cards at 84px.
+   *
+   * Radii are unchanged by this, so a lone `['promise']` draws at the *outer* radius and gets
+   * the whole circle to itself. The imperative `set` still addresses all three by index and
+   * no-ops on the ones that were never rendered, so a caller can drive values it is not
+   * showing without a guard.
+   */
+  only?: RingKey[]
+  /** Which palette the tracks and arcs are drawn from. Light unless you are on ink. */
+  mode?: RingMode
   label?: string
   className?: string
 }
 
 export const Rings = forwardRef<RingsHandle, Props>(function Rings(
-  { size = 240, promise = 0, goal = 0, circle = 0, detail = 'full', label, className },
+  { size = 240, promise = 0, goal = 0, circle = 0, detail = 'full', mode = 'light', only, label, className },
   ref,
 ) {
+  const shown = only ?? ORDER
   // Gradient ids are unique per instance, not per size: three `Rings` at size 40 in one
   // section would otherwise each define `kept-cap-promise-40`, and every arc after the first
   // would reference whichever duplicate the document resolved to.
   const uid = useId().replace(/:/g, '')
+  const tones = TONES[mode]
+  const shadow = mode === 'dark' ? darkColors.shadow : lightColors.shadow
   const segmentDeg = detail === 'full' ? 6 : 15
   const width = size * 0.105
   const gap = size * 0.028
@@ -108,12 +145,12 @@ export const Rings = forwardRef<RingsHandle, Props>(function Rings(
         step,
         segments: Array.from({ length: count }, (_, i) => ({
           d: arcPath(c, r, i * step, Math.min(i * step + step + SEAM_OVERLAP, 360)),
-          stroke: mix(TONES[key].from, TONES[key].to, (i * step + step / 2) / 360),
+          stroke: mix(tones[key].from, tones[key].to, (i * step + step / 2) / 360),
         })),
       }
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [c, size, segmentDeg])
+  }, [c, size, segmentDeg, mode])
 
   const segRefs = useRef<(SVGPathElement | null)[][]>([[], [], []])
   const headRefs = useRef<(SVGPathElement | null)[]>([])
@@ -138,7 +175,7 @@ export const Rings = forwardRef<RingsHandle, Props>(function Rings(
         remainder > 0.2
           ? {
               d: arcPath(c, ring.r, whole * ring.step, sweep),
-              stroke: mix(TONES[ring.key].from, TONES[ring.key].to, (whole * ring.step + remainder / 2) / 360),
+              stroke: mix(tones[ring.key].from, tones[ring.key].to, (whole * ring.step + remainder / 2) / 360),
             }
           : null,
       cap: p > 0.004 ? pointOn(c, ring.r, sweep + 2.5) : null,
@@ -189,9 +226,13 @@ export const Rings = forwardRef<RingsHandle, Props>(function Rings(
     },
   }))
 
+  // Built from `shown`, not from all three: a ring that was never drawn must not be announced.
   const describe =
     label ??
-    `Promise ${Math.round(promise * 100)} per cent, goal ${Math.round(goal * 100)} per cent, circle ${Math.round(circle * 100)} per cent`
+    shown
+      .map((key) => `${key} ${Math.round(initial[key] * 100)} per cent`)
+      .join(', ')
+      .replace(/^./, (first) => first.toUpperCase())
 
   return (
     <svg
@@ -205,17 +246,18 @@ export const Rings = forwardRef<RingsHandle, Props>(function Rings(
       <defs>
         {ORDER.map((key) => (
           <radialGradient key={key} id={`kept-cap-${key}-${uid}`}>
-            <stop offset="0.3" stopColor={lightColors.shadow} stopOpacity={0.26} />
-            <stop offset="1" stopColor={lightColors.shadow} stopOpacity={0} />
+            <stop offset="0.3" stopColor={shadow} stopOpacity={0.26} />
+            <stop offset="1" stopColor={shadow} stopOpacity={0} />
           </radialGradient>
         ))}
       </defs>
 
       {geometry.map((ring, index) => {
+        if (!shown.includes(ring.key)) return null
         const state = project(index, initial[ring.key])
         return (
           <g key={ring.key}>
-            <circle cx={c} cy={c} r={ring.r} stroke={TONES[ring.key].track} strokeWidth={width} fill="none" />
+            <circle cx={c} cy={c} r={ring.r} stroke={tones[ring.key].track} strokeWidth={width} fill="none" />
 
             <circle
               ref={(node) => {
@@ -249,7 +291,7 @@ export const Rings = forwardRef<RingsHandle, Props>(function Rings(
                 headRefs.current[index] = node
               }}
               d={state?.head?.d ?? ''}
-              stroke={state?.head?.stroke ?? TONES[ring.key].from}
+              stroke={state?.head?.stroke ?? tones[ring.key].from}
               strokeWidth={width}
               strokeLinecap="round"
               fill="none"
