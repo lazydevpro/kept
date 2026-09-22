@@ -323,6 +323,85 @@ time** — scrolling the page lives a year of the habit. Reference the user brou
       Then: convert the 3D PNGs to WebP, preloader, magnetic cursor, OG image, and a frame
       trace of every pinned section #web
 
+## Done — selling #trade
+
+- [x] There was no way out. Six trade routes, all buy-direction, `inputMint` hardcoded to
+      USDC, and no sell affordance anywhere in the app — money went in through KEPT and did
+      not come out through it. Self-custody meant nobody was trapped (swap it in any wallet),
+      but "open Phantom" is not an answer a consumer product gets to give #trade
+- [x] `GET /v1/trades/sell-quote` — priced in asset units, not dollars, because a seller has
+      a quantity rather than a budget. The Token-2022 transfer fee is reported on its own
+      line rather than netted: Jupiter prices the route, the mint takes the fee outside it,
+      and folding them together would put a number on screen Jupiter never quoted #backend
+- [x] `POST /v1/trades/sell-order` — verified wallet, mainnet only, and a holding check
+      before the wallet opens. The chain would reject an over-sell anyway, but only after
+      the reader approved it and paid a fee to find out #backend
+- [x] `lib/holdings.ts` — one implementation of "what do you hold", shared by the portfolio
+      and the sell check, so the app can never offer a sale it will then refuse. Base units
+      are bigint: a 9-decimal position passes 2^53 and SQLite's `SUM()` silently rounds once
+      it overflows an integer #backend
+- [x] Migration 0010 — `direction` on contributions and trade_orders. Sells sit beside buys
+      because holdings are the running sum of both, and splitting them means every read
+      joins two tables and every new query is a chance to forget one #backend
+- [x] Average-cost accounting. Total spend stops being the cost basis the moment anything is
+      sold, so the portfolio now splits unrealised (what is held, against its basis) from
+      realised (what sales brought in, against the average cost of those units). Verified
+      against a worked example: two buys at $10 and $30 a unit, sell 5 of 20 for $150 →
+      $50 realised, 15 units left at a $300 basis #backend
+- [x] Verification mirrors rather than branching late: a buy must increase the linked
+      wallet's balance of the mint, a sell must decrease it. The old predicate would have
+      rejected every sell #backend
+- [x] A sell never closes a week and never reaches a feed. Keeping a promise means putting
+      money in; taking it out is not an achievement and is nobody else's business #backend
+- [x] **The widget counted sells as deposits.** Proceeds live in the same column a buy uses
+      for spend, so "put in this month" read $110 after a $20 buy and a $90 sale. Fixed with
+      `direction = 'buy'`, and the regression test was checked by removing the filter and
+      watching it fail #backend
+- [x] Sell sheet on the portfolio, with 25/50/All presets against the holding and a
+      secondary button — getting money out has to be possible, not encouraged. Realised P&L
+      shows on a position only once something has actually been sold #screens
+- [ ] Unverified on-chain: every sell path is mainnet-only and this machine has no mainnet
+      key, so the routes are covered by tests and typecheck but no real sale has settled.
+      Needs the same device rehearsal the buy path needs #verify
+- [ ] No fiat off-ramp. Selling returns USDC to the user's own wallet; turning that into
+      money in a bank is a separate integration KEPT does not have #trade
+
+## Done — the purchase moment #screens
+
+- [x] There was no purchase animation. The entire celebration was `Alert.alert()` — a native
+      OS dialog with an OK button — and then the sheet closed onto an unchanged screen. No
+      haptic, no sound, no ring. Onboarding's **practice** ring fired a success haptic while
+      the real purchase fired nothing, so the rehearsal felt better than the event #screens
+- [x] Two stages, because signing is instant and verification is not. `KeptMoment` replaces
+      the ticket the moment the wallet returns a signature: the promise ring sweeps closed, a
+      success haptic fires, and the copy says what is true right then — "that's in",
+      "confirming on-chain". The word *kept* is deliberately not used yet #screens
+- [x] `settlement.tsx` — a root-level watcher that polls the pending contribution and, when
+      the chain agrees, brings a quiet banner, a light haptic, and a refetch of the rings,
+      widget and portfolio. It sits above the screens because the reader has closed the sheet
+      and changed tabs long before the answer arrives; a celebration that only fires if you
+      are still on the screen that started it is one most people never see #screens
+- [x] Polling rather than push: notifications are opt-in, off by default in local builds, and
+      a permission prompt is not what to spend on a confirmation someone is already waiting
+      for. It runs only while something is pending, backs off after 30s and gives up at three
+      minutes rather than nagging #mobile
+- [x] `Rings` gained `only` in **both** implementations. `goal={0} circle={0}` still draws
+      those tracks, so the success screen showed two extra rings sitting visibly unfinished at
+      the exact moment it was saying something went right. Caught by looking at it, not by
+      reading it #design
+- [x] `useSafeAreaInsets` in the banner would have **crashed every screen** — it throws
+      without a `SafeAreaProvider` and this app does not mount one, it relies on
+      `SafeAreaView`'s native insets. Found before it shipped; the banner uses `SafeAreaView`
+      like `components/ui.tsx` does #mobile
+- [x] Selling is watched by the same machinery and gets none of the celebration — no ring, no
+      success screen, just the settled banner. Getting money out has to be possible, not
+      encouraged #screens
+- [ ] Verified by rendering the moment in the Expo web export and screenshotting it, plus
+      typecheck, lint and an Android export. The **haptics are unverified** — they no-op on
+      web, so they need the same device pass everything else is waiting on #verify
+- [ ] Still silent. The cup score in `docs/launch-film.md` §2 is the sound this moment wants,
+      and the app's confirmation tone should be the same recording as the film's #design
+
 ## Next
 
 - [ ] Integrate PreStocks, or decide not to — see

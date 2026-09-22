@@ -37,6 +37,8 @@ import {
   type TradeOrder,
 } from './trade-api'
 import { useWalletLink } from './use-wallet-link'
+import { KeptMoment } from './kept-moment'
+import { useSettlementWatch } from './settlement'
 
 /** Matches the server's guard. A ceiling against a slipped decimal, not a cap on ambition. */
 const MIN_USDC = 1
@@ -62,6 +64,8 @@ export function PurchaseSheet({ asset, onClose }: { asset: InvestableAsset | nul
   const styles = useStyles()
   const { signTransactions } = useMobileWallet()
   const { account, linked, connecting, linkWallet } = useWalletLink()
+  const watchSettlement = useSettlementWatch()
+  const [done, setDone] = useState<{ receives: string | null; rehearsal: boolean } | null>(null)
   const goals = useGoals()
   const network = useNetwork()
 
@@ -97,6 +101,7 @@ export function PurchaseSheet({ asset, onClose }: { asset: InvestableAsset | nul
     setOrder(null)
     setAcknowledged(false)
     setAmountText('25')
+    setDone(null)
   }, [asset?.mint])
 
   const windows = useMemo(
@@ -135,7 +140,9 @@ export function PurchaseSheet({ asset, onClose }: { asset: InvestableAsset | nul
   }
 
   const confirm = async () => {
-    if (!order) return
+    // `asset` as well as `order`: the success view is built from the asset, and
+    // the sheet can be handed a different one between preparing and approving.
+    if (!order || !asset) return
     setTrading(true)
     try {
       const transaction = getTransactionDecoder().decode(Base64.toUint8Array(order.transaction))
@@ -145,11 +152,23 @@ export function PurchaseSheet({ asset, onClose }: { asset: InvestableAsset | nul
         requestId: order.requestId,
         signedTransaction: Base64.fromUint8Array(new Uint8Array(encoded)),
       })
-      Alert.alert(
-        order.mode === 'sandbox' ? 'Rehearsal submitted' : 'Purchase submitted',
-        `${execution.result.signature.slice(0, 8)}… is confirming. Your week is marked kept once it verifies.`,
-      )
-      onClose()
+      /*
+       * Two stages. This one is instant and optimistic — the ring closes the
+       * moment the wallet returns a signature. The chain has not been asked yet,
+       * so nothing here says "kept"; `settlement.tsx` watches for the answer and
+       * brings that word with it, wherever the reader has got to by then.
+       */
+      watchSettlement({
+        contributionId: execution.contributionId,
+        symbol: asset.symbol,
+        direction: 'buy',
+      })
+      setDone({
+        receives: quote?.outQuantity
+          ? `${quote.outQuantity.toLocaleString('en-US', { maximumFractionDigits: 6 })} ${asset.symbol}`
+          : null,
+        rehearsal: order.mode === 'sandbox',
+      })
     } catch (error) {
       Alert.alert('Investment unavailable', error instanceof Error ? error.message : 'Please try again.')
     } finally {
@@ -172,178 +191,191 @@ export function PurchaseSheet({ asset, onClose }: { asset: InvestableAsset | nul
       onClose={onClose}
       eyebrow={detail?.name ?? asset?.name ?? ''}
       title={asset?.symbol ?? ''}
-      leading={asset ? <AssetLogo asset={asset} size={44} /> : null}
+      leading={done ? null : asset ? <AssetLogo asset={asset} size={44} /> : null}
       // Pinned: the ticket is taller than a short screen, and the one thing
       // that must never be scrolled away is the button that spends the money.
       footer={
-        <>
-          {/* The acknowledgement rides with the button, not with the body: it
+        done ? null : (
+          <>
+            {/* The acknowledgement rides with the body's action, not the body: it
               gates the action, and scrolled out of sight it left the button
               asking for something the reader could not see. */}
-          {isTessera ? (
-            <Pressable
-              accessibilityRole="checkbox"
-              accessibilityState={{ checked: acknowledged }}
-              onPress={() => setAcknowledged((value) => !value)}
-              style={[styles.ack, acknowledged && styles.ackOn]}
-            >
-              <Icon
-                name={acknowledged ? 'checkCircle' : 'dot'}
-                size={22}
-                color={acknowledged ? colors.kiwiDeep : colors.inkFaint}
-              />
-              <T role="caption" style={styles.ackText}>
-                A high-risk loan participation right — not equity, and possibly restricted where you live.
-              </T>
-            </Pressable>
-          ) : null}
-          <Button
-            label={actionLabel()}
-            onPress={linked ? (order ? confirm : prepare) : linkWallet}
-            disabled={
-              connecting ||
-              trading ||
-              (linked && (!amountValid || !asset?.available || (isTessera && !acknowledged)))
-            }
-          />
-          <T role="caption" center color={colors.inkFaint}>
-            {order?.mode === 'sandbox'
-              ? 'Devnet rehearsal — no USDC is spent.'
-              : 'Counts toward this week. Nothing moves until you approve it in your wallet.'}
-          </T>
-        </>
+            {isTessera ? (
+              <Pressable
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: acknowledged }}
+                onPress={() => setAcknowledged((value) => !value)}
+                style={[styles.ack, acknowledged && styles.ackOn]}
+              >
+                <Icon
+                  name={acknowledged ? 'checkCircle' : 'dot'}
+                  size={22}
+                  color={acknowledged ? colors.kiwiDeep : colors.inkFaint}
+                />
+                <T role="caption" style={styles.ackText}>
+                  A high-risk loan participation right — not equity, and possibly restricted where you live.
+                </T>
+              </Pressable>
+            ) : null}
+            <Button
+              label={actionLabel()}
+              onPress={linked ? (order ? confirm : prepare) : linkWallet}
+              disabled={
+                connecting || trading || (linked && (!amountValid || !asset?.available || (isTessera && !acknowledged)))
+              }
+            />
+            <T role="caption" center color={colors.inkFaint}>
+              {order?.mode === 'sandbox'
+                ? 'Devnet rehearsal — no USDC is spent.'
+                : 'Counts toward this week. Nothing moves until you approve it in your wallet.'}
+            </T>
+          </>
+        )
       }
     >
-      {/* ── Price ── */}
-      <View style={styles.priceBlock}>
-        <Row gap={space[3]}>
-          <T role="stat">{price != null ? money(price) : '—'}</T>
-          {change24h != null ? (
-            <T role="label" color={change24h >= 0 ? colors.kiwiDeep : colors.coralDeep}>
-              {pct(change24h)}
-            </T>
-          ) : null}
-        </Row>
-        <Row gap={space[2]}>
-          {isTessera ? <Chip label="Private market" tone="grape" /> : null}
-          {detail?.verified ? <Chip label="Verified mint" tone="neutral" /> : null}
-        </Row>
-      </View>
-
-      {/* ── Movement, four windows. Flat is a real answer, so a zero shows. ── */}
-      <Row gap={space[2]} style={styles.windows}>
-        {windows.map((window) => (
-          <View key={window.label} style={styles.window}>
-            <T role="caption" center color={colors.inkFaint}>
-              {window.label}
-            </T>
-            <T
-              role="label"
-              center
-              color={
-                window.value == null ? colors.inkFaint : window.value >= 0 ? colors.kiwiDeep : colors.coralDeep
-              }
-            >
-              {window.value == null ? '—' : pct(window.value)}
-            </T>
-          </View>
-        ))}
-      </Row>
-
-      {/* ── Amount ── */}
-      <View style={styles.field}>
-        <T role="caption" color={colors.inkFaint}>
-          You pay
-        </T>
-        <View style={[styles.input, !amountValid && amountText.length > 0 && styles.inputBad]}>
-          <T role="stat" color={colors.inkFaint}>
-            $
-          </T>
-          <TextInput
-            value={amountText}
-            onChangeText={setAmountText}
-            keyboardType="decimal-pad"
-            inputMode="decimal"
-            selectTextOnFocus
-            accessibilityLabel="Amount in US dollars"
-            placeholder="0"
-            placeholderTextColor={colors.inkFaint}
-            style={[type.stat, styles.inputText, { color: colors.ink }]}
-          />
-          <T role="caption" color={colors.inkFaint}>
-            USDC
-          </T>
-        </View>
-        <Row gap={space[2]}>
-          {PRESETS.map((preset) => (
-            <Chip
-              key={preset}
-              label={`$${preset}`}
-              tone={amount === preset ? 'kiwi' : 'neutral'}
-              onPress={() => setAmountText(String(preset))}
-            />
-          ))}
-        </Row>
-      </View>
-
-      {/* ── What that buys ── */}
-      <View style={styles.receipt}>
-        <Row style={styles.receiptRow}>
-          <T role="bodySmall" color={colors.inkMuted}>
-            You receive
-          </T>
-          {quoteQuery.isFetching && !quote ? (
-            <ActivityIndicator color={colors.kiwiDeep} />
-          ) : (
-            <T role="label">
-              {quote?.outQuantity != null
-                ? `≈ ${quote.outQuantity.toLocaleString('en-US', { maximumFractionDigits: 6 })} ${asset?.symbol ?? ''}`
-                : '—'}
-            </T>
-          )}
-        </Row>
-        <Row style={styles.receiptRow}>
-          <T role="bodySmall" color={colors.inkMuted}>
-            Price each
-          </T>
-          <T role="label">{quote?.pricePerUnit != null ? money(quote.pricePerUnit) : '—'}</T>
-        </Row>
-        <Row style={styles.receiptRow}>
-          <T role="bodySmall" color={colors.inkMuted}>
-            Price impact
-          </T>
-          <T role="label" color={(quote?.priceImpactPct ?? 0) > 1 ? colors.coralDeep : colors.ink}>
-            {quote?.priceImpactPct != null ? `${quote.priceImpactPct.toFixed(2)}%` : '—'}
-          </T>
-        </Row>
-        {feePct > 0 ? (
-          <Row style={styles.receiptRow}>
-            <T role="bodySmall" color={colors.inkMuted}>
-              Transfer fee
-            </T>
-            <T role="label">{feePct}%</T>
-          </Row>
-        ) : null}
-        <Row style={[styles.receiptRow, styles.receiptLast]}>
-          <T role="bodySmall" color={colors.inkMuted}>
-            Route
-          </T>
-          <T role="label" numberOfLines={1}>
-            {order?.mode === 'sandbox' ? 'Devnet rehearsal' : (quote?.route ?? network.selectedNetwork.label)}
-          </T>
-        </Row>
-      </View>
-
-      {/* ── Market depth, as context rather than a headline. ── */}
-      <Row gap={space[2]} style={styles.stats}>
-        <Stat label="Liquidity" value={detail?.liquidityUsd != null ? compact(detail.liquidityUsd) : '—'} />
-        <Stat label="24h volume" value={detail?.volume24hUsd != null ? compact(detail.volume24hUsd) : '—'} />
-        <Stat
-          label="Holders"
-          value={detail?.holders != null ? detail.holders.toLocaleString('en-US') : '—'}
+      {/*
+        Signed. The ticket is replaced rather than covered — the numbers that led
+        to the decision are no longer the subject, and leaving them underneath
+        invites a second tap on a button that would buy again.
+      */}
+      {done ? (
+        <KeptMoment
+          symbol={asset?.symbol ?? ''}
+          amountUsd={money(amount)}
+          receives={done.receives}
+          rehearsal={done.rehearsal}
+          onDone={onClose}
         />
-      </Row>
+      ) : (
+        <>
+          {/* ── Price ── */}
+          <View style={styles.priceBlock}>
+            <Row gap={space[3]}>
+              <T role="stat">{price != null ? money(price) : '—'}</T>
+              {change24h != null ? (
+                <T role="label" color={change24h >= 0 ? colors.kiwiDeep : colors.coralDeep}>
+                  {pct(change24h)}
+                </T>
+              ) : null}
+            </Row>
+            <Row gap={space[2]}>
+              {isTessera ? <Chip label="Private market" tone="grape" /> : null}
+              {detail?.verified ? <Chip label="Verified mint" tone="neutral" /> : null}
+            </Row>
+          </View>
 
+          {/* ── Movement, four windows. Flat is a real answer, so a zero shows. ── */}
+          <Row gap={space[2]} style={styles.windows}>
+            {windows.map((window) => (
+              <View key={window.label} style={styles.window}>
+                <T role="caption" center color={colors.inkFaint}>
+                  {window.label}
+                </T>
+                <T
+                  role="label"
+                  center
+                  color={
+                    window.value == null ? colors.inkFaint : window.value >= 0 ? colors.kiwiDeep : colors.coralDeep
+                  }
+                >
+                  {window.value == null ? '—' : pct(window.value)}
+                </T>
+              </View>
+            ))}
+          </Row>
+
+          {/* ── Amount ── */}
+          <View style={styles.field}>
+            <T role="caption" color={colors.inkFaint}>
+              You pay
+            </T>
+            <View style={[styles.input, !amountValid && amountText.length > 0 && styles.inputBad]}>
+              <T role="stat" color={colors.inkFaint}>
+                $
+              </T>
+              <TextInput
+                value={amountText}
+                onChangeText={setAmountText}
+                keyboardType="decimal-pad"
+                inputMode="decimal"
+                selectTextOnFocus
+                accessibilityLabel="Amount in US dollars"
+                placeholder="0"
+                placeholderTextColor={colors.inkFaint}
+                style={[type.stat, styles.inputText, { color: colors.ink }]}
+              />
+              <T role="caption" color={colors.inkFaint}>
+                USDC
+              </T>
+            </View>
+            <Row gap={space[2]}>
+              {PRESETS.map((preset) => (
+                <Chip
+                  key={preset}
+                  label={`$${preset}`}
+                  tone={amount === preset ? 'kiwi' : 'neutral'}
+                  onPress={() => setAmountText(String(preset))}
+                />
+              ))}
+            </Row>
+          </View>
+
+          {/* ── What that buys ── */}
+          <View style={styles.receipt}>
+            <Row style={styles.receiptRow}>
+              <T role="bodySmall" color={colors.inkMuted}>
+                You receive
+              </T>
+              {quoteQuery.isFetching && !quote ? (
+                <ActivityIndicator color={colors.kiwiDeep} />
+              ) : (
+                <T role="label">
+                  {quote?.outQuantity != null
+                    ? `≈ ${quote.outQuantity.toLocaleString('en-US', { maximumFractionDigits: 6 })} ${asset?.symbol ?? ''}`
+                    : '—'}
+                </T>
+              )}
+            </Row>
+            <Row style={styles.receiptRow}>
+              <T role="bodySmall" color={colors.inkMuted}>
+                Price each
+              </T>
+              <T role="label">{quote?.pricePerUnit != null ? money(quote.pricePerUnit) : '—'}</T>
+            </Row>
+            <Row style={styles.receiptRow}>
+              <T role="bodySmall" color={colors.inkMuted}>
+                Price impact
+              </T>
+              <T role="label" color={(quote?.priceImpactPct ?? 0) > 1 ? colors.coralDeep : colors.ink}>
+                {quote?.priceImpactPct != null ? `${quote.priceImpactPct.toFixed(2)}%` : '—'}
+              </T>
+            </Row>
+            {feePct > 0 ? (
+              <Row style={styles.receiptRow}>
+                <T role="bodySmall" color={colors.inkMuted}>
+                  Transfer fee
+                </T>
+                <T role="label">{feePct}%</T>
+              </Row>
+            ) : null}
+            <Row style={[styles.receiptRow, styles.receiptLast]}>
+              <T role="bodySmall" color={colors.inkMuted}>
+                Route
+              </T>
+              <T role="label" numberOfLines={1}>
+                {order?.mode === 'sandbox' ? 'Devnet rehearsal' : (quote?.route ?? network.selectedNetwork.label)}
+              </T>
+            </Row>
+          </View>
+
+          {/* ── Market depth, as context rather than a headline. ── */}
+          <Row gap={space[2]} style={styles.stats}>
+            <Stat label="Liquidity" value={detail?.liquidityUsd != null ? compact(detail.liquidityUsd) : '—'} />
+            <Stat label="24h volume" value={detail?.volume24hUsd != null ? compact(detail.volume24hUsd) : '—'} />
+            <Stat label="Holders" value={detail?.holders != null ? detail.holders.toLocaleString('en-US') : '—'} />
+          </Row>
+        </>
+      )}
     </Sheet>
   )
 }

@@ -162,9 +162,23 @@ export function Rings({
   promise = 0,
   goal = 0,
   circle = 0,
+  only,
   label,
   children,
-}: Partial<RingValues> & { size?: number; label?: string; children?: ReactNode }) {
+}: Partial<RingValues> & {
+  size?: number
+  /**
+   * Which of the three to draw. All of them unless you say otherwise.
+   *
+   * Passing `goal={0} circle={0}` is not the same thing — a zero still draws that
+   * ring's TRACK, so a screen meant to show one ring shows three, two of them
+   * sitting visibly unfinished. Mirrors the prop on `web/components/rings.tsx`;
+   * radii are untouched, so a lone `['promise']` keeps the outer radius.
+   */
+  only?: RingKey[]
+  label?: string
+  children?: ReactNode
+}) {
   const { colors } = useAppTheme()
   const tones = ringTones(colors)
 
@@ -174,13 +188,18 @@ export function Rings({
   const radii = [c - width / 2, c - width * 1.5 - gap, c - width * 2.5 - gap * 2]
   const hole = radii[2] - width / 2
 
-  const rings: { key: RingKey; value: number; r: number }[] = [
+  const all: { key: RingKey; value: number; r: number }[] = [
     { key: 'promise', value: promise, r: radii[0] },
     { key: 'goal', value: goal, r: radii[1] },
     { key: 'circle', value: circle, r: radii[2] },
   ]
+  const rings = only ? all.filter((ring) => only.includes(ring.key)) : all
 
-  const describe = `Promise ${Math.round(promise * 100)}%, goal ${Math.round(goal * 100)}%, circle ${Math.round(circle * 100)}%`
+  // Built from what is drawn: a ring that was never rendered must not be announced.
+  const describe = rings
+    .map((ring) => `${ring.key} ${Math.round(ring.value * 100)}%`)
+    .join(', ')
+    .replace(/^./, (first) => first.toUpperCase())
 
   return (
     <View accessibilityLabel={label ?? describe} accessible style={{ width: size, height: size }}>
