@@ -25,6 +25,7 @@ web-build/
 build/
 .next/
 /web/out/
+/video/out/
 .expo/
 .kotlin/
 *.tsbuildinfo

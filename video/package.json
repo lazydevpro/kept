@@ -1,0 +1,27 @@
+{
+  "name": "@kept/video",
+  "version": "0.1.0",
+  "private": true,
+  "description": "KEPT — the launch film. See ../docs/launch-film.md.",
+  "scripts": {
+    "dev": "remotion studio",
+    "render": "node ./scripts/render.mjs",
+    "still": "remotion still Launch out/frame.png",
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.527",
+    "@remotion/google-fonts": "4.0.527",
+    "@remotion/media-utils": "4.0.527",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "remotion": "4.0.527"
+  },
+  "devDependencies": {
+    "@types/react": "19.3.0",
+    "prettier": "3.9.8",
+    "typescript": "5.9.2"
+  }
+}
