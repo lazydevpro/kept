@@ -653,12 +653,17 @@ describe("Neon Reserve API", () => {
       await settle(userId, "buy", "1000000000", "20000000", `w_buy_${userId}`);
       await settle(userId, "sell", "500000000", "90000000", `w_sell_${userId}`);
 
-      const response = await SELF.fetch("https://local.test/v1/widget/snapshot", {
-        headers: { cookie },
-      });
+      const response = await SELF.fetch(
+        "https://local.test/v1/widget/snapshot",
+        {
+          headers: { cookie },
+        },
+      );
       expect(response.status).toBe(200);
       const { snapshot } = (await response.json()) as {
-        snapshot: { summary: { contributions: { monthUsd: number; recentUsd: number[] } } };
+        snapshot: {
+          summary: { contributions: { monthUsd: number; recentUsd: number[] } };
+        };
       };
 
       // The $20 buy, and nothing from the $90 sale.

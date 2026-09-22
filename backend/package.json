@@ -9,11 +9,13 @@
     "types": "wrangler types",
     "test": "vitest run",
     "test:watch": "vitest",
-    "check": "npm run types && npm run typecheck && npm test",
+    "check": "npm run types && npm run typecheck && npm run format:check && npm test",
     "db:migrate:local": "wrangler d1 migrations apply DB --local",
     "db:seed:local": "wrangler d1 execute DB --local --file=./seed.sql",
     "db:seed:demo": "node ./scripts/seed-demo.mjs",
-    "deploy": "node ./scripts/deploy-guard.mjs"
+    "deploy": "node ./scripts/deploy-guard.mjs",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "dependencies": {
     "@better-auth/expo": "1.7.4",
@@ -30,6 +32,7 @@
     "@cloudflare/vitest-pool-workers": "0.21.3",
     "@types/node": "24.7.2",
     "drizzle-kit": "0.31.10",
+    "prettier": "3.9.8",
     "typescript": "5.9.2",
     "vitest": "4.1.0",
     "wrangler": "4.131.2"

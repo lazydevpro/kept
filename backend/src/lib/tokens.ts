@@ -46,7 +46,10 @@ export interface JupiterToken {
   stats24h?: JupiterWindow;
 }
 
-export async function fetchTokens(env: AppEnv, mints: string[]): Promise<Record<string, JupiterToken>> {
+export async function fetchTokens(
+  env: AppEnv,
+  mints: string[],
+): Promise<Record<string, JupiterToken>> {
   const unique = [...new Set(mints)].filter(Boolean);
   if (!unique.length) return {};
 
@@ -56,10 +59,13 @@ export async function fetchTokens(env: AppEnv, mints: string[]): Promise<Record<
   for (let start = 0; start < unique.length; start += IDS_PER_REQUEST) {
     const chunk = unique.slice(start, start + IDS_PER_REQUEST);
     try {
-      const response = await fetch(`${keyed ? KEYED_URL : FREE_URL}?query=${chunk.join(",")}`, {
-        headers: keyed ? { "x-api-key": env.JUPITER_API_KEY as string } : {},
-        signal: AbortSignal.timeout(TIMEOUT_MS),
-      });
+      const response = await fetch(
+        `${keyed ? KEYED_URL : FREE_URL}?query=${chunk.join(",")}`,
+        {
+          headers: keyed ? { "x-api-key": env.JUPITER_API_KEY as string } : {},
+          signal: AbortSignal.timeout(TIMEOUT_MS),
+        },
+      );
       if (!response.ok) continue;
       const payload = await response.json();
       const found = (Array.isArray(payload) ? payload : []) as JupiterToken[];
@@ -74,7 +80,10 @@ export async function fetchTokens(env: AppEnv, mints: string[]): Promise<Record<
   return tokens;
 }
 
-export async function fetchTokenIcons(env: AppEnv, mints: string[]): Promise<Record<string, string>> {
+export async function fetchTokenIcons(
+  env: AppEnv,
+  mints: string[],
+): Promise<Record<string, string>> {
   const tokens = await fetchTokens(env, mints);
   const icons: Record<string, string> = {};
   for (const [mint, token] of Object.entries(tokens)) {

@@ -69,7 +69,9 @@ awardRoutes.get("/", async (c) => {
   let weekStreak = 0;
   for (const row of promises.results as Array<Record<string, unknown>>) {
     if (!row.completed_at) {
-      const stillOpen = row.due_at ? new Date(String(row.due_at)) > new Date() : false;
+      const stillOpen = row.due_at
+        ? new Date(String(row.due_at)) > new Date()
+        : false;
       if (stillOpen) continue;
       break;
     }

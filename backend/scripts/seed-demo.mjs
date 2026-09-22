@@ -46,7 +46,8 @@ const run = (sql) => {
   }
 };
 
-const q = (value) => (value === null ? "NULL" : `'${String(value).replace(/'/g, "''")}'`);
+const q = (value) =>
+  value === null ? "NULL" : `'${String(value).replace(/'/g, "''")}'`;
 const iso = (daysAgo, hour = 18) => {
   const date = new Date();
   date.setUTCDate(date.getUTCDate() - daysAgo);
@@ -56,7 +57,9 @@ const iso = (daysAgo, hour = 18) => {
 /** Monday of the week `weeksAgo` back, as YYYY-MM-DD. */
 const weekStart = (weeksAgo) => {
   const date = new Date();
-  date.setUTCDate(date.getUTCDate() - ((date.getUTCDay() + 6) % 7) - weeksAgo * 7);
+  date.setUTCDate(
+    date.getUTCDate() - ((date.getUTCDay() + 6) % 7) - weeksAgo * 7,
+  );
   return date.toISOString().slice(0, 10);
 };
 
@@ -72,13 +75,20 @@ const ASSETS = {
 // printed and `/v1/me` will tell you which one the app is actually on.
 const owner =
   process.argv[2] ??
-  query("SELECT user_id FROM profiles ORDER BY rowid DESC LIMIT 1;")[0]?.user_id;
+  query("SELECT user_id FROM profiles ORDER BY rowid DESC LIMIT 1;")[0]
+    ?.user_id;
 if (!owner) {
-  console.error("No profile found. Open the app and sign in once, then re-run.");
+  console.error(
+    "No profile found. Open the app and sign in once, then re-run.",
+  );
   process.exit(1);
 }
-if (!query(`SELECT user_id FROM profiles WHERE user_id = ${q(owner)};`).length) {
-  console.error(`No profile for ${owner}. Check /v1/me for the id the app is using.`);
+if (
+  !query(`SELECT user_id FROM profiles WHERE user_id = ${q(owner)};`).length
+) {
+  console.error(
+    `No profile for ${owner}. Check /v1/me for the id the app is using.`,
+  );
   process.exit(1);
 }
 console.log(`Seeding demo data for ${owner}`);
@@ -200,8 +210,18 @@ friends.forEach((friend, index) => {
 
 // Encouragement, newest first in the feed.
 const posts = [
-  { id: `${TAG}_p1`, user: friends[0].id, body: "Week seven done. Slow and boring is working.", daysAgo: 1 },
-  { id: `${TAG}_p2`, user: friends[1].id, body: "Nearly skipped this one. Glad I didn't.", daysAgo: 3 },
+  {
+    id: `${TAG}_p1`,
+    user: friends[0].id,
+    body: "Week seven done. Slow and boring is working.",
+    daysAgo: 1,
+  },
+  {
+    id: `${TAG}_p2`,
+    user: friends[1].id,
+    body: "Nearly skipped this one. Glad I didn't.",
+    daysAgo: 3,
+  },
 ];
 posts.forEach((post) => {
   add(`INSERT INTO activity_posts (id, circle_id, user_id, kind, body, created_at)

@@ -57,14 +57,20 @@ export async function fetchQuotes(
       );
       if (!response.ok) continue;
       reached = true;
-      const payload = (await response.json()) as Record<string, JupiterQuote | undefined>;
+      const payload = (await response.json()) as Record<
+        string,
+        JupiterQuote | undefined
+      >;
       for (const mint of chunk) {
         const price = payload[mint]?.usdPrice;
         if (typeof price === "number" && Number.isFinite(price)) {
           const change = payload[mint]?.priceChange24h;
           quotes[mint] = {
             usdPrice: price,
-            priceChange24h: typeof change === "number" && Number.isFinite(change) ? change : null,
+            priceChange24h:
+              typeof change === "number" && Number.isFinite(change)
+                ? change
+                : null,
           };
         }
       }

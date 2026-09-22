@@ -41,7 +41,4 @@ export interface HoldingsBackfillJob {
 }
 
 export type Job =
-  | VerificationJob
-  | PushJob
-  | ShareCardJob
-  | HoldingsBackfillJob;
+  VerificationJob | PushJob | ShareCardJob | HoldingsBackfillJob;

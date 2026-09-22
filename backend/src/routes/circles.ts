@@ -151,7 +151,11 @@ circleRoutes.get("/:circleId", async (c) => {
       ...publicProfile(row),
       role: row.role,
       showedUp: Boolean(row.showed_up),
-      goalProgress: Math.min(1, Number(row.goal_complete ?? 0) / Math.max(1, Number(row.goal_target ?? 1))),
+      goalProgress: Math.min(
+        1,
+        Number(row.goal_complete ?? 0) /
+          Math.max(1, Number(row.goal_target ?? 1)),
+      ),
     })),
   });
 });
@@ -266,7 +270,12 @@ circleRoutes.delete("/:circleId/posts/:postId/reactions", async (c) => {
   const circleId = c.req.param("circleId");
   await requireMember(c.env, circleId, c.get("userId"));
   const emoji = REACTION_EMOJI.safeParse(c.req.query("emoji"));
-  if (!emoji.success) throw new ApiError(422, "That is not one of the reactions.", "invalid_input");
+  if (!emoji.success)
+    throw new ApiError(
+      422,
+      "That is not one of the reactions.",
+      "invalid_input",
+    );
   const post = await requirePost(c.env, circleId, c.req.param("postId"));
   await c.env.DB.prepare(
     "DELETE FROM reactions WHERE post_id = ? AND user_id = ? AND emoji = ?",
@@ -300,7 +309,8 @@ circleRoutes.post("/:circleId/members/:memberId/nudge", async (c) => {
   const userId = c.get("userId");
 
   await requireMember(c.env, circleId, userId);
-  if (target === userId) throw new ApiError(422, "You cannot nudge yourself.", "self_nudge");
+  if (target === userId)
+    throw new ApiError(422, "You cannot nudge yourself.", "self_nudge");
   await requireMember(c.env, circleId, target);
 
   const open = await c.env.DB.prepare(
@@ -311,7 +321,11 @@ circleRoutes.post("/:circleId/members/:memberId/nudge", async (c) => {
     .bind(target)
     .first<{ week_start: string }>();
   if (!open)
-    throw new ApiError(409, "They have no open promise this week.", "nothing_to_nudge");
+    throw new ApiError(
+      409,
+      "They have no open promise this week.",
+      "nothing_to_nudge",
+    );
 
   const inserted = await c.env.DB.prepare(
     `INSERT OR IGNORE INTO nudges (id, circle_id, from_user_id, to_user_id, week_start)
@@ -321,7 +335,11 @@ circleRoutes.post("/:circleId/members/:memberId/nudge", async (c) => {
     .run();
   // `changes` is 0 when the UNIQUE key already held a row for this week.
   if (!inserted.meta.changes)
-    throw new ApiError(409, "You already nudged them this week.", "already_nudged");
+    throw new ApiError(
+      409,
+      "You already nudged them this week.",
+      "already_nudged",
+    );
 
   const me = await c.env.DB.prepare(
     "SELECT display_name FROM profiles WHERE user_id = ?",
@@ -333,7 +351,12 @@ circleRoutes.post("/:circleId/members/:memberId/nudge", async (c) => {
   await c.env.DB.prepare(
     "INSERT INTO activity_posts (id, circle_id, user_id, kind, body) VALUES (?, ?, ?, 'encouragement', ?)",
   )
-    .bind(id("post"), circleId, userId, `${from} nudged a friend to keep this week`)
+    .bind(
+      id("post"),
+      circleId,
+      userId,
+      `${from} nudged a friend to keep this week`,
+    )
     .run();
 
   await c.env.JOBS.send({
