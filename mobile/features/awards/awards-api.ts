@@ -54,7 +54,14 @@ export const AWARDS: Award[] = [
   { id: 'nudge-10', metric: 'nudgesSent', threshold: 10, title: 'Good neighbour', object: 'gift', unit: nudges },
 
   { id: 'month-1', metric: 'perfectMonths', threshold: 1, title: 'Perfect month', object: 'calendar', unit: months },
-  { id: 'month-3', metric: 'perfectMonths', threshold: 3, title: 'Three perfect months', object: 'rocket', unit: months },
+  {
+    id: 'month-3',
+    metric: 'perfectMonths',
+    threshold: 3,
+    title: 'Three perfect months',
+    object: 'rocket',
+    unit: months,
+  },
 ]
 
 export const isEarned = (award: Award, counters: AwardCounters | undefined) =>

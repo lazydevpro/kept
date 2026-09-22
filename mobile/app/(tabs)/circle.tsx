@@ -1,18 +1,7 @@
 import { useState } from 'react'
 import { Alert, StyleSheet, TextInput, View } from 'react-native'
 import { AppHeader } from '@/components/app-header'
-import {
-  Button,
-  Card,
-  Chip,
-  IconButton,
-  PressableCard,
-  Row,
-  Screen,
-  SectionHeader,
-  Sheet,
-  T,
-} from '@/components/ui'
+import { Button, Card, Chip, IconButton, PressableCard, Row, Screen, SectionHeader, Sheet, T } from '@/components/ui'
 import { radii, space, type } from '@/constants/theme'
 import { makeThemedStyles, useAppTheme } from '@/components/theme-provider'
 import { IconPlate } from '@/design/icons'
@@ -269,9 +258,7 @@ export default function CircleScreen() {
                       <View style={styles.personCopy}>
                         <T role="label">{post.display_name}</T>
                         <T role="caption" color={colors.inkFaint}>
-                          {new Intl.DateTimeFormat(undefined, { weekday: 'short' }).format(
-                            new Date(post.created_at),
-                          )}
+                          {new Intl.DateTimeFormat(undefined, { weekday: 'short' }).format(new Date(post.created_at))}
                         </T>
                       </View>
                     </Row>

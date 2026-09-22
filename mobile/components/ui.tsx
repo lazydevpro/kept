@@ -469,10 +469,7 @@ export function Sheet({
 
   return (
     <Modal animationType="slide" transparent visible={visible} onRequestClose={onClose}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.sheetFill}
-      >
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.sheetFill}>
         <Pressable accessibilityLabel="Dismiss" style={styles.scrim} onPress={onClose} />
         {/* Capped and scrollable: the buy ticket is much taller than the
             confirmations this started out holding, and on a short screen with

@@ -6,16 +6,16 @@
 The living source of truth is **[../docs/design/kept-design-system.md](../docs/design/kept-design-system.md)**,
 and the implementation is:
 
-| Layer | File |
-| --- | --- |
-| Colour, type, spacing, radii, elevation, motion | `constants/theme.ts` |
-| Level 1 + 2 icons (line, duotone plate) | `design/icons.tsx` |
-| Level 3 objects (3D) | `design/objects.tsx`, `assets/3d/` |
-| 2D illustration scenes | `design/illustrations.tsx` |
-| UI primitives | `components/ui.tsx` |
-| The rings | `features/progress/rings.tsx` |
-| Icon / splash vector sources | `assets/brand/*.svg` |
-| Asset generator | `scripts/build-brand-assets.py` |
+| Layer                                           | File                               |
+| ----------------------------------------------- | ---------------------------------- |
+| Colour, type, spacing, radii, elevation, motion | `constants/theme.ts`               |
+| Level 1 + 2 icons (line, duotone plate)         | `design/icons.tsx`                 |
+| Level 3 objects (3D)                            | `design/objects.tsx`, `assets/3d/` |
+| 2D illustration scenes                          | `design/illustrations.tsx`         |
+| UI primitives                                   | `components/ui.tsx`                |
+| The rings                                       | `features/progress/rings.tsx`      |
+| Icon / splash vector sources                    | `assets/brand/*.svg`               |
+| Asset generator                                 | `scripts/build-brand-assets.py`    |
 
 ## The short version
 

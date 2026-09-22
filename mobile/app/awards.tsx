@@ -62,11 +62,7 @@ export default function AwardsScreen() {
             {latest?.title ?? next?.award.title ?? 'First promise'}
           </T>
           <T role="bodySmall" color={colors.sunDeep}>
-            {latest
-              ? latest.unit(latest.threshold)
-              : next
-                ? `${next.left} to go`
-                : 'Every award earned'}
+            {latest ? latest.unit(latest.threshold) : next ? `${next.left} to go` : 'Every award earned'}
           </T>
         </View>
       </Card>
