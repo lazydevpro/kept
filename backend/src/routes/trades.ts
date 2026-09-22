@@ -14,6 +14,7 @@ import {
 } from "@solana/kit";
 import { ApiError, id } from "../lib/http";
 import { fetchQuotes } from "../lib/prices";
+import { positionFor } from "../lib/holdings";
 import { fetchTokens } from "../lib/tokens";
 import { parseJson } from "../lib/validation";
 import type { AppEnv, Job, Variables } from "../types";
@@ -39,13 +40,47 @@ const CATALOG_TTL_MS = 60 * 60 * 1000;
  * index funds they sit next to.
  */
 const FEATURED = [
-  "SPYx", "QQQx", "VOOx", "tOpenAI", "tSpaceX", "tKalshi", "NVDAx", "AAPLx", "MSFTx", "GOOGLx", "AMZNx",
-  "METAx", "TSLAx", "AVGOx", "AMDx", "NFLXx", "COINx", "MSTRx", "HOODx",
-  "PLTRx", "CRCLx", "ORCLx", "JPMx", "BRK.Bx", "WMTx", "DISx", "MCDx",
-  "KOx", "UBERx", "ABNBx", "INTCx", "IBMx", "PFEx", "XOMx", "GLDx",
-  "SLVx", "TQQQx",
+  "SPYx",
+  "QQQx",
+  "VOOx",
+  "tOpenAI",
+  "tSpaceX",
+  "tKalshi",
+  "NVDAx",
+  "AAPLx",
+  "MSFTx",
+  "GOOGLx",
+  "AMZNx",
+  "METAx",
+  "TSLAx",
+  "AVGOx",
+  "AMDx",
+  "NFLXx",
+  "COINx",
+  "MSTRx",
+  "HOODx",
+  "PLTRx",
+  "CRCLx",
+  "ORCLx",
+  "JPMx",
+  "BRK.Bx",
+  "WMTx",
+  "DISx",
+  "MCDx",
+  "KOx",
+  "UBERx",
+  "ABNBx",
+  "INTCx",
+  "IBMx",
+  "PFEx",
+  "XOMx",
+  "GLDx",
+  "SLVx",
+  "TQQQx",
 ];
-const FEATURED_RANK = new Map(FEATURED.map((symbol, index) => [symbol.toUpperCase(), index]));
+const FEATURED_RANK = new Map(
+  FEATURED.map((symbol, index) => [symbol.toUpperCase(), index]),
+);
 const JUPITER_SWAP_URL = "https://api.jup.ag/swap/v2";
 /** Keyless, read-only. Pricing an amount must not depend on trading being configured. */
 const JUPITER_QUOTE_URL = "https://lite-api.jup.ag/swap/v1";
@@ -126,22 +161,42 @@ interface JupiterQuote {
   routePlan?: Array<{ swapInfo?: { label?: string } }>;
 }
 
-async function solanaRpc<T>(env: AppEnv, method: string, params: unknown[]): Promise<T> {
+async function solanaRpc<T>(
+  env: AppEnv,
+  method: string,
+  params: unknown[],
+): Promise<T> {
   const response = await fetch(env.SOLANA_RPC_URL, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ jsonrpc: "2.0", id: crypto.randomUUID(), method, params }),
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      id: crypto.randomUUID(),
+      method,
+      params,
+    }),
   });
-  if (!response.ok) throw new ApiError(502, "Solana devnet is temporarily unavailable.");
-  const payload = (await response.json()) as { result?: T; error?: { message: string } };
+  if (!response.ok)
+    throw new ApiError(502, "Solana devnet is temporarily unavailable.");
+  const payload = (await response.json()) as {
+    result?: T;
+    error?: { message: string };
+  };
   if (payload.error || payload.result === undefined)
-    throw new ApiError(502, payload.error?.message ?? "Solana devnet did not return a result.");
+    throw new ApiError(
+      502,
+      payload.error?.message ?? "Solana devnet did not return a result.",
+    );
   return payload.result;
 }
 
-function toBase64(bytes: { readonly length: number; readonly [index: number]: number }): string {
+function toBase64(bytes: {
+  readonly length: number;
+  readonly [index: number]: number;
+}): string {
   let binary = "";
-  for (let index = 0; index < bytes.length; index += 1) binary += String.fromCharCode(bytes[index]);
+  for (let index = 0; index < bytes.length; index += 1)
+    binary += String.fromCharCode(bytes[index]);
   return btoa(binary);
 }
 
@@ -154,7 +209,8 @@ function toBase64(bytes: { readonly length: number; readonly [index: number]: nu
  * Reading the real one picked up T-SpaceX, which the hardcoded pair had no way
  * to know about.
  */
-const TESSERA_TOKENS_URL = "https://rest-api.tessera.pe/v1/public/token-details";
+const TESSERA_TOKENS_URL =
+  "https://rest-api.tessera.pe/v1/public/token-details";
 const TESSERA_TTL_MS = 60 * 60 * 1000;
 /** All three mints carry the same 0.20% Token-2022 transfer fee; verified on-chain. */
 const TESSERA_TRANSFER_FEE_BPS = 20;
@@ -175,8 +231,20 @@ interface TesseraToken {
  * someone mid-purchase as the asset having been withdrawn.
  */
 const TESSERA_FALLBACK: readonly TesseraToken[] = [
-  { id: "T-OpenAI", name: "T-OpenAI", code: "tOpenAI", sector: "Artificial Intelligence", mint: "oPAiAikWTaFj9RYoRFD35ccfwhnMcB3ThgBZRHSkjTZ" },
-  { id: "T-Kalshi", name: "T-Kalshi", code: "tKalshi", sector: "Prediction Markets", mint: "TKLSidmLVt3cqGaaodG8tyRzoANfQwoh67AccjmubeZ" },
+  {
+    id: "T-OpenAI",
+    name: "T-OpenAI",
+    code: "tOpenAI",
+    sector: "Artificial Intelligence",
+    mint: "oPAiAikWTaFj9RYoRFD35ccfwhnMcB3ThgBZRHSkjTZ",
+  },
+  {
+    id: "T-Kalshi",
+    name: "T-Kalshi",
+    code: "tKalshi",
+    sector: "Prediction Markets",
+    mint: "TKLSidmLVt3cqGaaodG8tyRzoANfQwoh67AccjmubeZ",
+  },
 ];
 
 function mapTesseraToken(token: TesseraToken): InvestableAsset {
@@ -213,8 +281,11 @@ async function getTesseraAssets(): Promise<InvestableAsset[]> {
     if (!response.ok) throw new Error(String(response.status));
     const tokens = (await response.json()) as TesseraToken[];
     // An empty or malformed body must not be cached as "Tessera has no assets".
-    if (!Array.isArray(tokens) || !tokens.length) throw new Error("empty catalog");
-    const assets = tokens.filter((token) => token?.mint && token?.code).map(mapTesseraToken);
+    if (!Array.isArray(tokens) || !tokens.length)
+      throw new Error("empty catalog");
+    const assets = tokens
+      .filter((token) => token?.mint && token?.code)
+      .map(mapTesseraToken);
     if (!assets.length) throw new Error("no usable tokens");
     tesseraCache = { at: Date.now(), assets };
     return assets;
@@ -255,7 +326,8 @@ async function getXStocksAssets() {
   // Pages are fetched in parallel batches. Upstream takes ~2.5s a page, so
   // walking ten of them one at a time blew past the request timeout.
   const first = await fetchCatalogPage(0);
-  if (!first) throw new ApiError(502, "The asset catalog is temporarily unavailable.");
+  if (!first)
+    throw new ApiError(502, "The asset catalog is temporarily unavailable.");
 
   const nodes = [...(first.nodes ?? [])];
   let next = 1;
@@ -287,12 +359,15 @@ function normalizeTesseraSymbol(symbol: string) {
 
 async function findTesseraAsset(symbol: string) {
   return (await getTesseraAssets()).find(
-    (asset) => normalizeTesseraSymbol(asset.symbol) === normalizeTesseraSymbol(symbol),
+    (asset) =>
+      normalizeTesseraSymbol(asset.symbol) === normalizeTesseraSymbol(symbol),
   );
 }
 
 function mapXStocksAsset(asset: XStocksAsset): InvestableAsset | null {
-  const deployment = asset.deployments.find((item) => item.network === "Solana");
+  const deployment = asset.deployments.find(
+    (item) => item.network === "Solana",
+  );
   if (!deployment) return null;
   return {
     name: asset.name,
@@ -309,9 +384,13 @@ function mapXStocksAsset(asset: XStocksAsset): InvestableAsset | null {
 }
 
 async function getInvestableAssets(requestedSymbols: string[]) {
-  const requested = new Set(requestedSymbols.map((symbol) => symbol.trim().toUpperCase()));
+  const requested = new Set(
+    requestedSymbols.map((symbol) => symbol.trim().toUpperCase()),
+  );
   const tessera = await getTesseraAssets();
-  const tesseraAssets = tessera.filter((asset) => requested.has(asset.symbol.toUpperCase()));
+  const tesseraAssets = tessera.filter((asset) =>
+    requested.has(asset.symbol.toUpperCase()),
+  );
   const xStockSymbols = [...requested].filter(
     (symbol) => !tessera.some((asset) => asset.symbol.toUpperCase() === symbol),
   );
@@ -340,11 +419,17 @@ async function findInvestableAsset(symbol: string) {
  * Returns null rather than throwing: an asset Jupiter knows and our catalog does
  * not is still worth pricing, it just has no provider or fee to report.
  */
-async function findInvestableAssetByMint(mint: string): Promise<InvestableAsset | null> {
-  const tessera = (await getTesseraAssets()).find((asset) => asset.mint === mint);
+async function findInvestableAssetByMint(
+  mint: string,
+): Promise<InvestableAsset | null> {
+  const tessera = (await getTesseraAssets()).find(
+    (asset) => asset.mint === mint,
+  );
   if (tessera) return tessera;
   const xStock = (await getXStocksAssets()).find((asset) =>
-    asset.deployments.some((item) => item.network === "Solana" && item.address === mint),
+    asset.deployments.some(
+      (item) => item.network === "Solana" && item.address === mint,
+    ),
   );
   return xStock ? mapXStocksAsset(xStock) : null;
 }
@@ -355,11 +440,16 @@ export const tradeRoutes = new Hono<{
 }>();
 
 tradeRoutes.get("/assets", async (c) => {
-  const requested = (c.req.query("symbols") ?? "SPYx,QQQx,TSLAx,tOpenAI,tKalshi,tSpaceX")
+  const requested = (
+    c.req.query("symbols") ?? "SPYx,QQQx,TSLAx,tOpenAI,tKalshi,tSpaceX"
+  )
     .split(",")
     .slice(0, 12);
   const assets = await getInvestableAssets(requested);
-  const quotes = await fetchQuotes(c.env, assets.map((asset) => asset.mint));
+  const quotes = await fetchQuotes(
+    c.env,
+    assets.map((asset) => asset.mint),
+  );
   return c.json({
     assets: assets.map((asset) => ({
       ...asset,
@@ -384,7 +474,10 @@ tradeRoutes.get("/catalog", async (c) => {
   const limit = Math.min(Math.max(Number(c.req.query("limit") ?? 24), 1), 50);
   const page = Math.max(Number(c.req.query("page") ?? 0), 0);
 
-  const [tessera, xStocksRaw] = await Promise.all([getTesseraAssets(), getXStocksAssets()]);
+  const [tessera, xStocksRaw] = await Promise.all([
+    getTesseraAssets(),
+    getXStocksAssets(),
+  ]);
   const xStocks = xStocksRaw
     .map(mapXStocksAsset)
     .filter((asset): asset is InvestableAsset => asset !== null);
@@ -423,7 +516,10 @@ tradeRoutes.get("/catalog", async (c) => {
   });
 
   const slice = ordered.slice(page * limit, page * limit + limit);
-  const quotes = await fetchQuotes(c.env, slice.map((asset) => asset.mint));
+  const quotes = await fetchQuotes(
+    c.env,
+    slice.map((asset) => asset.mint),
+  );
 
   return c.json({
     assets: slice.map((asset) => ({
@@ -454,12 +550,14 @@ tradeRoutes.get("/asset", async (c) => {
     findInvestableAssetByMint(mint),
   ]);
   const token = tokens[mint];
-  if (!token && !listed) throw new ApiError(404, "That asset is not on the shelf.");
+  if (!token && !listed)
+    throw new ApiError(404, "That asset is not on the shelf.");
 
   const change = (window?: { priceChange?: number }) =>
     typeof window?.priceChange === "number" ? window.priceChange : null;
   const volume24h =
-    typeof token?.stats24h?.buyVolume === "number" && typeof token?.stats24h?.sellVolume === "number"
+    typeof token?.stats24h?.buyVolume === "number" &&
+    typeof token?.stats24h?.sellVolume === "number"
       ? token.stats24h.buyVolume + token.stats24h.sellVolume
       : null;
 
@@ -498,17 +596,20 @@ tradeRoutes.get("/asset", async (c) => {
  * This writes nothing and needs no wallet, so the ticket can price an amount
  * while the reader is still deciding whether to connect one.
  */
-tradeRoutes.get("/quote", async (c) => {
-  const outputMint = (c.req.query("outputMint") ?? "").trim();
-  const amountUsdc = Number(c.req.query("amountUsdc") ?? "0");
-  if (!outputMint) throw new ApiError(400, "An output mint is required.");
-  if (!Number.isFinite(amountUsdc) || amountUsdc < MIN_ORDER_USDC || amountUsdc > MAX_ORDER_USDC)
-    throw new ApiError(422, `Enter an amount between $${MIN_ORDER_USDC} and $${MAX_ORDER_USDC}.`);
-
-  const amount = String(Math.round(amountUsdc * 1_000_000));
+/**
+ * Asks Jupiter what one side buys the other, without persisting anything.
+ *
+ * Shared by both directions so a buy preview and a sell preview cannot disagree
+ * about slippage or route formatting.
+ */
+async function priceRoute(
+  inputMint: string,
+  outputMint: string,
+  amount: string,
+) {
   const url = new URL(`${JUPITER_QUOTE_URL}/quote`);
   url.search = new URLSearchParams({
-    inputMint: SOLANA_USDC,
+    inputMint,
     outputMint,
     amount,
     slippageBps: "50",
@@ -520,13 +621,58 @@ tradeRoutes.get("/quote", async (c) => {
     if (!response.ok) throw new Error(String(response.status));
     payload = (await response.json()) as JupiterQuote;
   } catch {
-    throw new ApiError(502, "Could not price that amount right now.", "quote_unavailable");
+    throw new ApiError(
+      502,
+      "Could not price that amount right now.",
+      "quote_unavailable",
+    );
   }
-  if (!payload.outAmount) throw new ApiError(422, "No route is available for that amount.", "no_route");
+  if (!payload.outAmount)
+    throw new ApiError(
+      422,
+      "No route is available for that amount.",
+      "no_route",
+    );
+  return payload;
+}
+
+const routeLabel = (payload: JupiterQuote) =>
+  payload.routePlan
+    ?.map((step) => step.swapInfo?.label)
+    .filter(Boolean)
+    .join(" → ") || null;
+
+const impactPct = (payload: JupiterQuote) =>
+  payload.priceImpactPct !== undefined
+    ? Number(payload.priceImpactPct) * 100
+    : null;
+
+tradeRoutes.get("/quote", async (c) => {
+  const outputMint = (c.req.query("outputMint") ?? "").trim();
+  const amountUsdc = Number(c.req.query("amountUsdc") ?? "0");
+  if (!outputMint) throw new ApiError(400, "An output mint is required.");
+  if (
+    !Number.isFinite(amountUsdc) ||
+    amountUsdc < MIN_ORDER_USDC ||
+    amountUsdc > MAX_ORDER_USDC
+  )
+    throw new ApiError(
+      422,
+      `Enter an amount between $${MIN_ORDER_USDC} and $${MAX_ORDER_USDC}.`,
+    );
+
+  const payload = await priceRoute(
+    SOLANA_USDC,
+    outputMint,
+    String(Math.round(amountUsdc * 1_000_000)),
+  );
 
   const tokens = await fetchTokens(c.env, [outputMint]);
   const decimals = tokens[outputMint]?.decimals ?? null;
-  const outQuantity = decimals === null ? null : Number(payload.outAmount) / Math.pow(10, decimals);
+  const outQuantity =
+    decimals === null
+      ? null
+      : Number(payload.outAmount) / Math.pow(10, decimals);
 
   return c.json({
     quote: {
@@ -536,10 +682,69 @@ tradeRoutes.get("/quote", async (c) => {
       outQuantity,
       // What each unit actually costs once the route is taken, which is the
       // number worth comparing against the headline price.
-      pricePerUnit: outQuantity && outQuantity > 0 ? amountUsdc / outQuantity : null,
-      priceImpactPct:
-        payload.priceImpactPct !== undefined ? Number(payload.priceImpactPct) * 100 : null,
-      route: payload.routePlan?.map((step) => step.swapInfo?.label).filter(Boolean).join(" → ") || null,
+      pricePerUnit:
+        outQuantity && outQuantity > 0 ? amountUsdc / outQuantity : null,
+      priceImpactPct: impactPct(payload),
+      route: routeLabel(payload),
+    },
+  });
+});
+
+/**
+ * The other direction: what a quantity of an asset is worth in USDC right now.
+ *
+ * Takes a quantity rather than a dollar amount, because that is the number the
+ * seller actually has — "all of it", or "half". Writes nothing and needs no
+ * wallet, same as the buy preview.
+ *
+ * `transferFeeBps` is reported separately rather than folded into the figure.
+ * Jupiter quotes the swap; a Token-2022 transfer fee is taken by the mint on the
+ * way out and is not part of the route, so a quote that silently netted it would
+ * be the app inventing a number Jupiter never said.
+ */
+tradeRoutes.get("/sell-quote", async (c) => {
+  const inputMint = (c.req.query("inputMint") ?? "").trim();
+  const quantity = Number(c.req.query("quantity") ?? "0");
+  if (!inputMint) throw new ApiError(400, "An input mint is required.");
+  if (!Number.isFinite(quantity) || quantity <= 0)
+    throw new ApiError(422, "Enter how much you want to sell.");
+
+  const [tokens, listed] = await Promise.all([
+    fetchTokens(c.env, [inputMint]),
+    findInvestableAssetByMint(inputMint),
+  ]);
+  const decimals = tokens[inputMint]?.decimals;
+  if (decimals === undefined)
+    throw new ApiError(
+      422,
+      "That asset cannot be priced right now.",
+      "no_decimals",
+    );
+
+  const baseUnits = BigInt(Math.round(quantity * Math.pow(10, decimals)));
+  if (baseUnits <= 0n)
+    throw new ApiError(422, "That amount is too small to sell.", "dust");
+
+  const payload = await priceRoute(
+    inputMint,
+    SOLANA_USDC,
+    baseUnits.toString(),
+  );
+  const proceedsUsdc = Number(payload.outAmount) / 1_000_000;
+  const transferFeeBps = listed?.transferFeeBps ?? 0;
+
+  return c.json({
+    quote: {
+      quantity,
+      baseUnits: baseUnits.toString(),
+      decimals,
+      proceedsUsdc,
+      pricePerUnit: quantity > 0 ? proceedsUsdc / quantity : null,
+      // Charged by the mint, not the route. Tessera's three are 0.20%; xStocks are 0.
+      transferFeeBps,
+      transferFeeUsdc: (proceedsUsdc * transferFeeBps) / 10_000,
+      priceImpactPct: impactPct(payload),
+      route: routeLabel(payload),
     },
   });
 });
@@ -564,15 +769,8 @@ tradeRoutes.post("/order", async (c) => {
   if (!wallet)
     throw new ApiError(403, "Verify this wallet before requesting an order.");
   const asset = await findInvestableAsset(body.outputSymbol);
-  if (
-    !asset ||
-    asset.mint !== body.outputMint ||
-    !asset.available
-  ) {
-    throw new ApiError(
-      422,
-      "This asset is not currently available on Solana.",
-    );
+  if (!asset || asset.mint !== body.outputMint || !asset.available) {
+    throw new ApiError(422, "This asset is not currently available on Solana.");
   }
   if (asset.provider === "tessera" && !body.tesseraAcknowledged)
     throw new ApiError(
@@ -588,9 +786,11 @@ tradeRoutes.post("/order", async (c) => {
     // contribution, never against a literal. Rows written under the old prefix
     // still carry it on both sides and keep verifying.
     const verificationReference = `kept:v1:${requestId}:${c.get("userId")}:${amount}`;
-    const latest = await solanaRpc<{ value: LatestBlockhash }>(c.env, "getLatestBlockhash", [
-      { commitment: "confirmed" },
-    ]);
+    const latest = await solanaRpc<{ value: LatestBlockhash }>(
+      c.env,
+      "getLatestBlockhash",
+      [{ commitment: "confirmed" }],
+    );
     const message = pipe(
       createTransactionMessage({ version: 0 }),
       (value) => setTransactionMessageFeePayer(address(body.taker), value),
@@ -602,9 +802,15 @@ tradeRoutes.post("/order", async (c) => {
           },
           value,
         ),
-      (value) => appendTransactionMessageInstruction(getAddMemoInstruction({ memo: verificationReference }), value),
+      (value) =>
+        appendTransactionMessageInstruction(
+          getAddMemoInstruction({ memo: verificationReference }),
+          value,
+        ),
     );
-    const transaction = toBase64(getTransactionEncoder().encode(compileTransaction(message)));
+    const transaction = toBase64(
+      getTransactionEncoder().encode(compileTransaction(message)),
+    );
     const expiresAt = new Date(Date.now() + 90_000).toISOString();
     await c.env.DB.prepare(
       `INSERT INTO trade_orders (request_id, user_id, wallet_address, input_mint, output_mint, input_amount, expected_output_amount, output_symbol, goal_id, expires_at, execution_mode, verification_reference)
@@ -642,7 +848,11 @@ tradeRoutes.post("/order", async (c) => {
     });
   }
   if (!c.env.JUPITER_API_KEY)
-    throw new ApiError(409, "Jupiter is not configured yet.", "provider_not_configured");
+    throw new ApiError(
+      409,
+      "Jupiter is not configured yet.",
+      "provider_not_configured",
+    );
   const url = new URL(`${JUPITER_SWAP_URL}/order`);
   url.search = new URLSearchParams({
     inputMint: SOLANA_USDC,
@@ -663,8 +873,8 @@ tradeRoutes.post("/order", async (c) => {
   const expiresAt =
     order.expireAt ?? new Date(Date.now() + 60_000).toISOString();
   await c.env.DB.prepare(
-    `INSERT INTO trade_orders (request_id, user_id, wallet_address, input_mint, output_mint, input_amount, expected_output_amount, output_symbol, goal_id, expires_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO trade_orders (request_id, user_id, wallet_address, input_mint, output_mint, input_amount, expected_output_amount, output_symbol, goal_id, expires_at, direction, asset_mint, asset_symbol)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'buy', ?, ?)`,
   )
     .bind(
       order.requestId,
@@ -677,8 +887,115 @@ tradeRoutes.post("/order", async (c) => {
       body.outputSymbol,
       body.goalId ?? null,
       expiresAt,
+      body.outputMint,
+      body.outputSymbol,
     )
     .run();
+  return c.json({ order });
+});
+
+/**
+ * Sell a position back to USDC.
+ *
+ * Mainnet only, and not because of a missing key: there is nothing to sell on
+ * devnet. A rehearsal buy signs a memo and receives no asset, so a devnet sell
+ * would be disposing of a balance that does not exist. It refuses rather than
+ * pretending, the same way a live buy does.
+ *
+ * The holding check is ours, not the chain's. The chain would reject an
+ * over-sell anyway, but only after the reader has approved it in their wallet
+ * and paid a fee to find out.
+ */
+tradeRoutes.post("/sell-order", async (c) => {
+  const body = await parseJson(
+    c,
+    z.object({
+      inputMint: z.string().min(32).max(44),
+      quantity: z.number().positive(),
+      taker: z.string().min(32).max(44),
+    }),
+  );
+
+  const wallet = await c.env.DB.prepare(
+    "SELECT id FROM wallet_connections WHERE user_id = ? AND address = ? AND verified_at IS NOT NULL",
+  )
+    .bind(c.get("userId"), body.taker)
+    .first();
+  if (!wallet) throw new ApiError(403, "Verify this wallet before selling.");
+
+  if (String(c.env.SOLANA_CLUSTER) !== "mainnet-beta")
+    throw new ApiError(
+      409,
+      "Selling needs mainnet — devnet rehearsals never received an asset to sell.",
+      "mainnet_required",
+    );
+  if (!c.env.JUPITER_API_KEY)
+    throw new ApiError(
+      409,
+      "Jupiter is not configured yet.",
+      "provider_not_configured",
+    );
+
+  const position = await positionFor(c.env, c.get("userId"), body.inputMint);
+  if (!position || position.units <= 0n)
+    throw new ApiError(422, "You do not hold that asset.", "no_position");
+
+  const decimals = position.decimals;
+  if (decimals === null)
+    throw new ApiError(
+      422,
+      "That position cannot be priced yet.",
+      "no_decimals",
+    );
+
+  const requested = BigInt(Math.round(body.quantity * Math.pow(10, decimals)));
+  if (requested <= 0n)
+    throw new ApiError(422, "That amount is too small to sell.", "dust");
+  if (requested > position.units)
+    throw new ApiError(
+      422,
+      "That is more than you hold.",
+      "insufficient_holding",
+    );
+
+  const url = new URL(`${JUPITER_SWAP_URL}/order`);
+  url.search = new URLSearchParams({
+    inputMint: body.inputMint,
+    outputMint: SOLANA_USDC,
+    amount: requested.toString(),
+    taker: body.taker,
+  }).toString();
+  const response = await fetch(url, {
+    headers: { "x-api-key": c.env.JUPITER_API_KEY },
+  });
+  if (!response.ok) throw new ApiError(502, "Could not prepare a live quote.");
+  const order = (await response.json()) as OrderResponse;
+  if (!order.transaction)
+    throw new ApiError(
+      422,
+      order.errorMessage ?? "No executable route is available.",
+    );
+
+  const expiresAt =
+    order.expireAt ?? new Date(Date.now() + 60_000).toISOString();
+  await c.env.DB.prepare(
+    `INSERT INTO trade_orders (request_id, user_id, wallet_address, input_mint, output_mint, input_amount, expected_output_amount, output_symbol, goal_id, expires_at, direction, asset_mint, asset_symbol)
+     VALUES (?, ?, ?, ?, ?, ?, ?, 'USDC', NULL, ?, 'sell', ?, ?)`,
+  )
+    .bind(
+      order.requestId,
+      c.get("userId"),
+      body.taker,
+      body.inputMint,
+      SOLANA_USDC,
+      requested.toString(),
+      order.outAmount,
+      expiresAt,
+      body.inputMint,
+      position.symbol ?? "Investment",
+    )
+    .run();
+
   return c.json({ order });
 });
 
@@ -699,42 +1016,61 @@ tradeRoutes.post("/execute", async (c) => {
     throw new ApiError(404, "This order is unavailable or was already used.");
   if (String(order.execution_mode) === "sandbox") {
     if (new Date(String(order.expires_at)).getTime() <= Date.now())
-      throw new ApiError(409, "This test order expired. Prepare a fresh one.", "order_expired");
+      throw new ApiError(
+        409,
+        "This test order expired. Prepare a fresh one.",
+        "order_expired",
+      );
     const signature = await solanaRpc<string>(c.env, "sendTransaction", [
       body.signedTransaction,
-      { encoding: "base64", preflightCommitment: "confirmed", skipPreflight: false },
+      {
+        encoding: "base64",
+        preflightCommitment: "confirmed",
+        skipPreflight: false,
+      },
     ]);
     const contributionId = id("contribution");
     await c.env.DB.batch([
-      c.env.DB.prepare("UPDATE trade_orders SET executed_at = CURRENT_TIMESTAMP WHERE request_id = ?").bind(
-        body.requestId,
-      ),
-      c.env.DB
-        .prepare(
-          `INSERT INTO contributions (id, user_id, goal_id, wallet_address, signature, asset_symbol, asset_mint, amount_base_units, execution_mode, input_amount_usdc_base_units, verification_reference)
+      c.env.DB.prepare(
+        "UPDATE trade_orders SET executed_at = CURRENT_TIMESTAMP WHERE request_id = ?",
+      ).bind(body.requestId),
+      c.env.DB.prepare(
+        `INSERT INTO contributions (id, user_id, goal_id, wallet_address, signature, asset_symbol, asset_mint, amount_base_units, execution_mode, input_amount_usdc_base_units, verification_reference)
            VALUES (?, ?, ?, ?, ?, ?, ?, '0', 'sandbox', ?, ?)`,
-        )
-        .bind(
-          contributionId,
-          c.get("userId"),
-          order.goal_id,
-          order.wallet_address,
-          signature,
-          order.output_symbol,
-          order.output_mint,
-          order.input_amount,
-          order.verification_reference,
-        ),
+      ).bind(
+        contributionId,
+        c.get("userId"),
+        order.goal_id,
+        order.wallet_address,
+        signature,
+        order.output_symbol,
+        order.output_mint,
+        order.input_amount,
+        order.verification_reference,
+      ),
     ]);
-    await c.env.JOBS.send({ kind: "verify_contribution", contributionId } satisfies Job);
+    await c.env.JOBS.send({
+      kind: "verify_contribution",
+      contributionId,
+    } satisfies Job);
     return c.json({
-      result: { status: "Success", signature, code: 0, totalInputAmount: "0", totalOutputAmount: "0" },
+      result: {
+        status: "Success",
+        signature,
+        code: 0,
+        totalInputAmount: "0",
+        totalOutputAmount: "0",
+      },
       contributionId,
       mode: "sandbox",
     });
   }
   if (!c.env.JUPITER_API_KEY)
-    throw new ApiError(409, "Jupiter is not configured yet.", "provider_not_configured");
+    throw new ApiError(
+      409,
+      "Jupiter is not configured yet.",
+      "provider_not_configured",
+    );
   const response = await fetch(`${JUPITER_SWAP_URL}/execute`, {
     method: "POST",
     headers: {
@@ -759,25 +1095,46 @@ tradeRoutes.post("/execute", async (c) => {
     );
   }
   const contributionId = id("contribution");
+  const selling = String(order.direction) === "sell";
+
+  /*
+   * The two columns swap meaning with the direction, which is the one thing about
+   * this table worth reading twice (migration 0010 spells it out):
+   *
+   *   buy   amount = asset received,  usdc = what was spent
+   *   sell  amount = asset disposed,  usdc = what came back
+   *
+   * On a sell the asset is the order's INPUT, so `asset_mint` must come from
+   * `asset_mint` rather than `output_mint` — the latter is USDC and would file the
+   * disposal against the dollar, leaving the real position untouched forever.
+   */
   await c.env.DB.prepare(
-    `INSERT INTO contributions (id, user_id, goal_id, wallet_address, signature, asset_symbol, asset_mint, amount_base_units, input_amount_usdc_base_units)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO contributions (id, user_id, goal_id, wallet_address, signature, asset_symbol, asset_mint, amount_base_units, input_amount_usdc_base_units, direction)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   )
     .bind(
       contributionId,
       c.get("userId"),
-      order.goal_id,
+      // A sell is not progress against a goal, so it is never attached to one.
+      selling ? null : order.goal_id,
       order.wallet_address,
       result.signature,
-      order.output_symbol,
-      order.output_mint,
-      result.totalOutputAmount,
-      order.input_amount,
+      selling
+        ? (order.asset_symbol ?? order.output_symbol)
+        : order.output_symbol,
+      selling ? (order.asset_mint ?? order.input_mint) : order.output_mint,
+      selling ? order.input_amount : result.totalOutputAmount,
+      selling ? result.totalOutputAmount : order.input_amount,
+      selling ? "sell" : "buy",
     )
     .run();
   await c.env.JOBS.send({
     kind: "verify_contribution",
     contributionId,
   } satisfies Job);
-  return c.json({ result, contributionId });
+  return c.json({
+    result,
+    contributionId,
+    direction: selling ? "sell" : "buy",
+  });
 });

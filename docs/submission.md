@@ -246,6 +246,24 @@ against a wallet you've proven you own, the app verifies it before it counts. Th
 one thing in the product that genuinely couldn't be built another way, and everything
 social rests on it.
 
+### Getting your money back out
+
+Every position can be sold back to USDC from the portfolio screen — pick a quantity or tap
+**All**, see what it is worth right now, approve it in your wallet. The proceeds land in
+your own wallet, not in an account KEPT controls.
+
+Selling is deliberately quiet: a secondary button under the numbers, never a primary action
+competing with the week's promise. And it does not touch the social side at all — a sale
+never closes a week, never affects a streak, and is never posted to your circle. Keeping a
+promise means putting money in. Taking it out is nobody else's business.
+
+Because the assets are yours, KEPT is not the only way out either. Your holdings sit in your
+own wallet and can be swapped anywhere on Solana, with or without this app. That is the
+difference between a product you can leave and a product you are inside of.
+
+One honest limit: selling returns **USDC**, not dollars in a bank account. Converting that
+to spendable money needs an exchange or off-ramp, which KEPT does not do.
+
 ### Private markets, through Tessera
 
 Alongside public equities there's a small **private markets** lane powered by Tessera:

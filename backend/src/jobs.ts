@@ -68,14 +68,19 @@ function receivedAmount(
   const held = (balances: TokenBalances) =>
     (balances ?? [])
       .filter((balance) => balance.owner === owner && balance.mint === mint)
-      .reduce((total, balance) => total + BigInt(balance.uiTokenAmount.amount), 0n);
+      .reduce(
+        (total, balance) => total + BigInt(balance.uiTokenAmount.amount),
+        0n,
+      );
 
   const decimals = (transaction.meta?.postTokenBalances ?? []).find(
     (balance) => balance.owner === owner && balance.mint === mint,
   )?.uiTokenAmount.decimals;
 
   return {
-    amount: held(transaction.meta?.postTokenBalances) - held(transaction.meta?.preTokenBalances),
+    amount:
+      held(transaction.meta?.postTokenBalances) -
+      held(transaction.meta?.preTokenBalances),
     decimals: decimals ?? null,
   };
 }
@@ -88,7 +93,7 @@ function receivedAmount(
  */
 async function backfillHoldings(env: AppEnv, contributionId: string) {
   const contribution = await env.DB.prepare(
-    `SELECT id, signature, wallet_address, asset_mint FROM contributions
+    `SELECT id, signature, wallet_address, asset_mint, direction FROM contributions
      WHERE id = ? AND status = 'verified' AND execution_mode = 'live'
        AND holdings_checked_at IS NULL`,
   )
@@ -111,7 +116,11 @@ async function backfillHoldings(env: AppEnv, contributionId: string) {
   try {
     transaction = await rpc<RpcTransaction | null>(env, "getTransaction", [
       contribution.signature,
-      { commitment: "confirmed", encoding: "jsonParsed", maxSupportedTransactionVersion: 0 },
+      {
+        commitment: "confirmed",
+        encoding: "jsonParsed",
+        maxSupportedTransactionVersion: 0,
+      },
     ]);
   } catch {
     // Pruned or unavailable. Give up on this row rather than retry nightly.
@@ -128,7 +137,13 @@ async function backfillHoldings(env: AppEnv, contributionId: string) {
     String(contribution.wallet_address),
     String(contribution.asset_mint),
   );
-  await stamp(amount.toString(), decimals);
+  // Same sign convention as verification: magnitude positive, direction carries
+  // the sign. No sell can reach here today — every one is stamped
+  // `holdings_checked_at` on verify — but a column that means two different
+  // things depending on which function wrote it is a trap worth not setting.
+  const magnitude =
+    String(contribution.direction) === "sell" ? -amount : amount;
+  await stamp(magnitude.toString(), decimals);
 }
 
 /**
@@ -145,7 +160,10 @@ export async function queueHoldingsBackfill(env: AppEnv, limit = 100) {
     .bind(limit)
     .all();
   for (const row of pending.results as Array<{ id: string }>) {
-    await env.JOBS.send({ kind: "backfill_holdings", contributionId: row.id } satisfies Job);
+    await env.JOBS.send({
+      kind: "backfill_holdings",
+      contributionId: row.id,
+    } satisfies Job);
   }
   return pending.results.length;
 }
@@ -182,6 +200,19 @@ async function verifyContribution(env: AppEnv, contributionId: string) {
     String(contribution.wallet_address),
     String(contribution.asset_mint),
   );
+
+  /*
+   * A sell moves the asset the other way, so the buy-side predicate rejects every
+   * one of them. The chain is still the authority — it just has to be asked the
+   * mirrored question: did this wallet's balance of that mint go DOWN.
+   *
+   * The magnitude is stored positive. `direction` carries the sign, and the
+   * nightly holdings backfill writes whatever delta it reads, so a negative in
+   * this column would mean two different things depending on which code wrote it.
+   */
+  const selling = String(contribution.direction) === "sell";
+  const moved = selling ? -tokenAmount : tokenAmount;
+
   const valid =
     transaction.meta?.err == null &&
     transaction.transaction.signatures.includes(
@@ -190,7 +221,7 @@ async function verifyContribution(env: AppEnv, contributionId: string) {
     keys.includes(String(contribution.wallet_address)) &&
     (sandbox
       ? memoMatched && Boolean(contribution.verification_reference)
-      : Boolean(contribution.asset_mint) && tokenAmount > 0n);
+      : Boolean(contribution.asset_mint) && moved > 0n);
   if (!valid) {
     await env.DB.prepare(
       "UPDATE contributions SET status = 'rejected', failure_reason = ? WHERE id = ?",
@@ -198,7 +229,9 @@ async function verifyContribution(env: AppEnv, contributionId: string) {
       .bind(
         sandbox
           ? "The devnet rehearsal did not contain the expected signed KEPT memo."
-          : "Transaction failed or did not increase the linked wallet’s selected asset balance.",
+          : selling
+            ? "Transaction failed or did not reduce the linked wallet’s balance of that asset."
+            : "Transaction failed or did not increase the linked wallet’s selected asset balance.",
         contributionId,
       )
       .run();
@@ -216,13 +249,18 @@ async function verifyContribution(env: AppEnv, contributionId: string) {
          holdings_checked_at = CURRENT_TIMESTAMP
      WHERE id = ?`,
   )
-    .bind(
-      occurredAt,
-      tokenAmount.toString(),
-      decimals ?? null,
-      contributionId,
-    )
+    .bind(occurredAt, moved.toString(), decimals ?? null, contributionId)
     .run();
+
+  /*
+   * Everything below is the social half, and a sell gets none of it.
+   *
+   * Keeping a promise means putting money in. Taking money out is not an
+   * achievement, must not close a week, and is nobody else's business — the
+   * circle sees progress, and a disposal is not progress. The position and the
+   * portfolio are already updated above, which is the whole effect a sell has.
+   */
+  if (selling) return;
 
   if (contribution.goal_id) {
     const promise = await env.DB.prepare(
@@ -351,9 +389,14 @@ async function sendPush(env: AppEnv, job: PushJob) {
     // Expo answers 200 even when individual messages fail, so the per-ticket
     // statuses are the only place a dead token shows up. Left unread, an
     // uninstalled device stays in the table and is retried every week forever.
-    const payload = (await response.json().catch(() => null)) as { data?: ExpoTicket[] } | null;
+    const payload = (await response.json().catch(() => null)) as {
+      data?: ExpoTicket[];
+    } | null;
     (payload?.data ?? []).forEach((ticket, index) => {
-      if (ticket.status === "error" && ticket.details?.error === "DeviceNotRegistered") {
+      if (
+        ticket.status === "error" &&
+        ticket.details?.error === "DeviceNotRegistered"
+      ) {
         dead.push(chunk[index]);
       }
     });
@@ -406,7 +449,12 @@ export async function runWeeklyReminder(env: AppEnv) {
       (SELECT target_cents FROM weekly_promises WHERE goal_id = g.id ORDER BY week_start DESC LIMIT 1) AS target_cents,
       (SELECT due_at FROM weekly_promises WHERE goal_id = g.id ORDER BY week_start DESC LIMIT 1) AS previous_due
      FROM goals g WHERE g.status = 'active'`,
-  ).all<{ id: string; user_id: string; target_cents: number | null; previous_due: string | null }>();
+  ).all<{
+    id: string;
+    user_id: string;
+    target_cents: number | null;
+    previous_due: string | null;
+  }>();
   const now = new Date();
   const monday = new Date(now);
   monday.setUTCDate(now.getUTCDate() - ((now.getUTCDay() + 6) % 7));
@@ -415,12 +463,29 @@ export async function runWeeklyReminder(env: AppEnv) {
   for (const goal of activeGoals.results) {
     const previousDue = goal.previous_due ? new Date(goal.previous_due) : null;
     const due = new Date(monday);
-    due.setUTCDate(monday.getUTCDate() + (previousDue ? (previousDue.getUTCDay() + 6) % 7 : 6));
-    due.setUTCHours(previousDue?.getUTCHours() ?? 18, previousDue?.getUTCMinutes() ?? 0, 0, 0);
+    due.setUTCDate(
+      monday.getUTCDate() +
+        (previousDue ? (previousDue.getUTCDay() + 6) % 7 : 6),
+    );
+    due.setUTCHours(
+      previousDue?.getUTCHours() ?? 18,
+      previousDue?.getUTCMinutes() ?? 0,
+      0,
+      0,
+    );
     await env.DB.prepare(
       `INSERT OR IGNORE INTO weekly_promises (id, goal_id, user_id, week_start, due_at, target_cents)
        VALUES (?, ?, ?, ?, ?, ?)`,
-    ).bind(id("promise"), goal.id, goal.user_id, weekStart, due.toISOString(), goal.target_cents).run();
+    )
+      .bind(
+        id("promise"),
+        goal.id,
+        goal.user_id,
+        weekStart,
+        due.toISOString(),
+        goal.target_cents,
+      )
+      .run();
   }
   // Reminders are tracked per promise, not per user. The cron runs nightly and
   // the window is two days wide, so without `reminded_at` the same promise

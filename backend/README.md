@@ -70,3 +70,9 @@ There are deliberately no real account IDs, resource IDs, tokens, routes, or dep
 `GET /v1/trades/assets` resolves current Solana token addresses from the xStocks public asset API and supplies the verified official Tessera mints for T-OpenAI and T-Kalshi. `POST /v1/trades/order` validates that metadata before requesting a Jupiter Swap V2 transaction. The mobile wallet signs the transaction; `POST /v1/trades/execute` submits it to Jupiter. A successful response still enters the contribution-verification queue before it affects goals or social activity.
 
 This flow is mainnet-only because both xStocks and Tessera T-Tokens are unavailable on Solana devnet. Local requests return a clear `mainnet_required` error instead of simulating a purchase. Tessera orders require an explicit high-risk acknowledgment and make no claim that a T-Token is company equity.
+
+`GET /v1/trades/sell-quote` and `POST /v1/trades/sell-order` are the way back out, priced in asset units rather than dollars. A sell is refused unless the caller holds that much — checked against `lib/holdings.ts`, the same module the portfolio reads, so the two can never disagree. Sells are mainnet-only for a different reason than buys: a devnet rehearsal signs a memo and receives no asset, so there is nothing on that cluster to dispose of.
+
+Sells land in `contributions` next to buys, separated by `direction`. Two conventions matter and migration 0010 spells them out: the units column is always a positive magnitude, and `input_amount_usdc_base_units` means *spent* on a buy and *received* on a sell. Any query that means "money in" must say `direction = 'buy'` — the widget's does, with a test that fails loudly if it stops.
+
+Verification mirrors: a buy must increase the linked wallet's balance of the mint, a sell must decrease it. A sell never closes a weekly promise and never reaches a circle feed.

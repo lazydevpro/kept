@@ -35,9 +35,7 @@ export function useInvestableAssets() {
   return useQuery({
     queryKey: ['investable-assets'],
     queryFn: () =>
-      apiRequest<{ assets: InvestableAsset[] }>(
-        '/v1/trades/assets?symbols=SPYx,QQQx,TSLAx,tOpenAI,tKalshi,tSpaceX',
-      ),
+      apiRequest<{ assets: InvestableAsset[] }>('/v1/trades/assets?symbols=SPYx,QQQx,TSLAx,tOpenAI,tKalshi,tSpaceX'),
     staleTime: 60 * 60_000,
     retry: 1,
   })
@@ -115,6 +113,47 @@ export function requestTradeOrder(input: {
   tesseraAcknowledged?: boolean
 }) {
   return apiRequest<{ order: TradeOrder }>('/v1/trades/order', { method: 'POST', body: JSON.stringify(input) })
+}
+
+/**
+ * Selling a position back to USDC.
+ *
+ * Priced by quantity rather than by dollars, because that is the number the
+ * seller has — "all of it", or "half". The fee is reported separately rather
+ * than netted: Jupiter prices the swap, while a Token-2022 transfer fee is taken
+ * by the mint outside the route, so folding it in would be inventing a figure
+ * Jupiter never quoted.
+ */
+export interface SellQuote {
+  quantity: number
+  baseUnits: string
+  decimals: number
+  proceedsUsdc: number
+  pricePerUnit: number | null
+  transferFeeBps: number
+  transferFeeUsdc: number
+  priceImpactPct: number | null
+  route: string | null
+}
+
+export function useSellQuote(mint: string | null, quantity: number | null) {
+  return useQuery({
+    queryKey: ['sell-quote', mint, quantity],
+    queryFn: () =>
+      apiRequest<{ quote: SellQuote }>(
+        `/v1/trades/sell-quote?inputMint=${encodeURIComponent(mint!)}&quantity=${quantity}`,
+      ),
+    enabled: Boolean(mint) && Boolean(quantity) && (quantity ?? 0) > 0,
+    staleTime: 15_000,
+    retry: 0,
+  })
+}
+
+export function requestSellOrder(input: { inputMint: string; quantity: number; taker: string }) {
+  return apiRequest<{ order: TradeOrder }>('/v1/trades/sell-order', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  })
 }
 
 export function executeTrade(input: { requestId: string; signedTransaction: string }) {

@@ -19,13 +19,23 @@ export interface Position {
   decimals: number | null
   baseUnits: string
   quantity: number | null
+  /** Buys. Named `lots` since before selling existed. */
   lots: number
+  sells: number
+  soldQuantity: number | null
+  /** False once the position has been sold down to nothing — kept for its realised P&L. */
+  open: boolean
+  /** Cost of what is STILL HELD, on average cost — not total spend, once anything is sold. */
   costUsd: number
   avgCostUsd: number | null
   priceUsd: number | null
   valueUsd: number | null
+  /** Unrealised: value of the remaining units against their basis. */
   pnlUsd: number | null
   pnlPct: number | null
+  /** What sales brought in, and what they locked in against average cost. */
+  proceedsUsd: number
+  realisedUsd: number
   firstAt: string | null
   lastAt: string | null
 }
@@ -40,6 +50,7 @@ export interface Portfolio {
     valueUsd: number | null
     pnlUsd: number | null
     pnlPct: number | null
+    realisedUsd: number
   }
   positions: Position[]
   /** Devnet rehearsals: no money moved, no asset received. Never holdings. */

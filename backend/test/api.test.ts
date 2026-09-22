@@ -50,7 +50,10 @@ describe("Neon Reserve API", () => {
       "https://local.test/api/auth/sign-in/anonymous",
       {
         method: "POST",
-        headers: { "content-type": "application/json", origin: "neonreserve://" },
+        headers: {
+          "content-type": "application/json",
+          origin: "neonreserve://",
+        },
         body: "{}",
       },
     );
@@ -89,7 +92,10 @@ describe("Neon Reserve API", () => {
         "https://local.test/api/auth/sign-in/anonymous",
         {
           method: "POST",
-          headers: { "content-type": "application/json", origin: "neonreserve://" },
+          headers: {
+            "content-type": "application/json",
+            origin: "neonreserve://",
+          },
           body: "{}",
         },
       );
@@ -103,17 +109,26 @@ describe("Neon Reserve API", () => {
     const created = await SELF.fetch("https://local.test/v1/circles", {
       method: "POST",
       headers: { "content-type": "application/json", cookie: owner },
-      body: JSON.stringify({ name: "Quiet Money", description: "Members only." }),
+      body: JSON.stringify({
+        name: "Quiet Money",
+        description: "Members only.",
+      }),
     });
     expect(created.status).toBe(201);
     const { id: circleId } = (await created.json()) as { id: string };
 
-    const asOwner = await SELF.fetch(`https://local.test/v1/circles/${circleId}`, {
-      headers: { cookie: owner },
-    });
+    const asOwner = await SELF.fetch(
+      `https://local.test/v1/circles/${circleId}`,
+      {
+        headers: { cookie: owner },
+      },
+    );
     expect(asOwner.status).toBe(200);
 
-    for (const path of [`/v1/circles/${circleId}`, `/v1/circles/${circleId}/feed`]) {
+    for (const path of [
+      `/v1/circles/${circleId}`,
+      `/v1/circles/${circleId}/feed`,
+    ]) {
       const denied = await SELF.fetch(`https://local.test${path}`, {
         headers: { cookie: stranger },
       });
@@ -124,7 +139,11 @@ describe("Neon Reserve API", () => {
     // socket would hand them everything the HTTP routes just refused.
     const ticket = await SELF.fetch(
       `https://local.test/v1/circles/${circleId}/live-ticket`,
-      { method: "POST", headers: { "content-type": "application/json", cookie: stranger }, body: "{}" },
+      {
+        method: "POST",
+        headers: { "content-type": "application/json", cookie: stranger },
+        body: "{}",
+      },
     );
     expect(ticket.status).toBe(403);
 
@@ -132,7 +151,9 @@ describe("Neon Reserve API", () => {
     const list = await SELF.fetch("https://local.test/v1/circles", {
       headers: { cookie: stranger },
     });
-    const { circles } = (await list.json()) as { circles: Array<{ id: string }> };
+    const { circles } = (await list.json()) as {
+      circles: Array<{ id: string }>;
+    };
     expect(circles.some((circle) => circle.id === circleId)).toBe(false);
   });
 
@@ -146,7 +167,10 @@ describe("Neon Reserve API", () => {
         "https://local.test/api/auth/sign-in/anonymous",
         {
           method: "POST",
-          headers: { "content-type": "application/json", origin: "neonreserve://" },
+          headers: {
+            "content-type": "application/json",
+            origin: "neonreserve://",
+          },
           body: "{}",
         },
       );
@@ -162,17 +186,27 @@ describe("Neon Reserve API", () => {
     const { id: circleId } = (await created.json()) as { id: string };
 
     // Creating a circle posts a "joined" entry, which is something to react to.
-    const feed = await SELF.fetch(`https://local.test/v1/circles/${circleId}/feed`, {
-      headers: { cookie: owner },
-    });
-    const { posts } = (await feed.json()) as Array<unknown> & { posts: Array<{ id: string }> };
+    const feed = await SELF.fetch(
+      `https://local.test/v1/circles/${circleId}/feed`,
+      {
+        headers: { cookie: owner },
+      },
+    );
+    const { posts } = (await feed.json()) as Array<unknown> & {
+      posts: Array<{ id: string }>;
+    };
     const postId = posts[0].id;
 
     const reactions = async () => {
-      const response = await SELF.fetch(`https://local.test/v1/circles/${circleId}/feed`, {
-        headers: { cookie: owner },
-      });
-      const body = (await response.json()) as { posts: Array<{ reactions: string | null }> };
+      const response = await SELF.fetch(
+        `https://local.test/v1/circles/${circleId}/feed`,
+        {
+          headers: { cookie: owner },
+        },
+      );
+      const body = (await response.json()) as {
+        posts: Array<{ reactions: string | null }>;
+      };
       return body.posts[0].reactions ?? "";
     };
 
@@ -193,7 +227,9 @@ describe("Neon Reserve API", () => {
     expect((await react("POST")).status).toBe(201);
     expect((await reactions()).match(/🔥/g)?.length).toBe(1);
 
-    expect((await react("DELETE", `?emoji=${encodeURIComponent("🔥")}`)).status).toBe(200);
+    expect(
+      (await react("DELETE", `?emoji=${encodeURIComponent("🔥")}`)).status,
+    ).toBe(200);
     expect(await reactions()).not.toContain("🔥");
 
     // An emoji outside the set is refused on the way out as well as in.
@@ -212,7 +248,10 @@ describe("Neon Reserve API", () => {
         "https://local.test/api/auth/sign-in/anonymous",
         {
           method: "POST",
-          headers: { "content-type": "application/json", origin: "neonreserve://" },
+          headers: {
+            "content-type": "application/json",
+            origin: "neonreserve://",
+          },
           body: "{}",
         },
       );
@@ -233,19 +272,30 @@ describe("Neon Reserve API", () => {
 
     // The friend joins through a real invite rather than a direct insert.
     const invited = await post(`/v1/circles/${circleId}/invites`, owner, {});
-    const { invite } = (await invited.json()) as { invite: { deepLink: string } };
+    const { invite } = (await invited.json()) as {
+      invite: { deepLink: string };
+    };
     const token = invite.deepLink.split("/").pop() as string;
-    expect((await post(`/v1/invites/${token}/accept`, friend)).status).toBe(200);
+    expect((await post(`/v1/invites/${token}/accept`, friend)).status).toBe(
+      200,
+    );
 
     const friendId = await (async () => {
-      const me = await SELF.fetch("https://local.test/v1/me", { headers: { cookie: friend } });
+      const me = await SELF.fetch("https://local.test/v1/me", {
+        headers: { cookie: friend },
+      });
       return ((await me.json()) as { profile: { id: string } }).profile.id;
     })();
 
     // With no open promise there is nothing to nudge about.
-    const tooEarly = await post(`/v1/circles/${circleId}/members/${friendId}/nudge`, owner);
+    const tooEarly = await post(
+      `/v1/circles/${circleId}/members/${friendId}/nudge`,
+      owner,
+    );
     expect(tooEarly.status).toBe(409);
-    expect(((await tooEarly.json()) as { error: { code: string } }).error.code).toBe("nothing_to_nudge");
+    expect(
+      ((await tooEarly.json()) as { error: { code: string } }).error.code,
+    ).toBe("nothing_to_nudge");
 
     // Give the friend a promise that is still open: due a week from now.
     const goal = await post("/v1/goals", friend, {
@@ -265,21 +315,38 @@ describe("Neon Reserve API", () => {
       ).status,
     ).toBe(201);
 
-    const first = await post(`/v1/circles/${circleId}/members/${friendId}/nudge`, owner);
+    const first = await post(
+      `/v1/circles/${circleId}/members/${friendId}/nudge`,
+      owner,
+    );
     expect(first.status).toBe(201);
 
     // The UNIQUE key is the rate limit: one per person per week.
-    const again = await post(`/v1/circles/${circleId}/members/${friendId}/nudge`, owner);
+    const again = await post(
+      `/v1/circles/${circleId}/members/${friendId}/nudge`,
+      owner,
+    );
     expect(again.status).toBe(409);
-    expect(((await again.json()) as { error: { code: string } }).error.code).toBe("already_nudged");
+    expect(
+      ((await again.json()) as { error: { code: string } }).error.code,
+    ).toBe("already_nudged");
 
-    const self = await post(`/v1/circles/${circleId}/members/${friendId}/nudge`, friend);
+    const self = await post(
+      `/v1/circles/${circleId}/members/${friendId}/nudge`,
+      friend,
+    );
     expect(self.status).toBe(422);
-    expect(((await self.json()) as { error: { code: string } }).error.code).toBe("self_nudge");
+    expect(
+      ((await self.json()) as { error: { code: string } }).error.code,
+    ).toBe("self_nudge");
 
     // And it shows up in the award counters the screen reads.
-    const awards = await SELF.fetch("https://local.test/v1/awards", { headers: { cookie: owner } });
-    const { counters } = (await awards.json()) as { counters: { nudgesSent: number; friends: number } };
+    const awards = await SELF.fetch("https://local.test/v1/awards", {
+      headers: { cookie: owner },
+    });
+    const { counters } = (await awards.json()) as {
+      counters: { nudgesSent: number; friends: number };
+    };
     expect(counters.nudgesSent).toBe(1);
     expect(counters.friends).toBeGreaterThanOrEqual(1);
   });
@@ -306,24 +373,41 @@ describe("Neon Reserve API", () => {
       "https://local.test/api/auth/sign-in/anonymous",
       {
         method: "POST",
-        headers: { "content-type": "application/json", origin: "neonreserve://" },
+        headers: {
+          "content-type": "application/json",
+          origin: "neonreserve://",
+        },
         body: "{}",
       },
     );
     const cookie = signIn.headers.get("set-cookie") ?? "";
     const privateKey = ed25519.utils.randomSecretKey();
     const walletAddress = bs58.encode(ed25519.getPublicKey(privateKey));
-    const challenge = await SELF.fetch("https://local.test/v1/wallets/challenge", {
-      method: "POST",
-      headers: { cookie, "content-type": "application/json" },
-      body: JSON.stringify({ address: walletAddress }),
-    });
-    const challengePayload = (await challenge.json()) as { challengeId: string; message: string };
-    const signature = bs58.encode(ed25519.sign(new TextEncoder().encode(challengePayload.message), privateKey));
+    const challenge = await SELF.fetch(
+      "https://local.test/v1/wallets/challenge",
+      {
+        method: "POST",
+        headers: { cookie, "content-type": "application/json" },
+        body: JSON.stringify({ address: walletAddress }),
+      },
+    );
+    const challengePayload = (await challenge.json()) as {
+      challengeId: string;
+      message: string;
+    };
+    const signature = bs58.encode(
+      ed25519.sign(
+        new TextEncoder().encode(challengePayload.message),
+        privateKey,
+      ),
+    );
     const verify = await SELF.fetch("https://local.test/v1/wallets/verify", {
       method: "POST",
       headers: { cookie, "content-type": "application/json" },
-      body: JSON.stringify({ challengeId: challengePayload.challengeId, signature }),
+      body: JSON.stringify({
+        challengeId: challengePayload.challengeId,
+        signature,
+      }),
     });
     expect(verify.status).toBe(201);
 
@@ -376,5 +460,248 @@ describe("Neon Reserve API", () => {
     // Second nightly run on the same open promise must stay silent.
     const second = await runWeeklyReminder(env);
     expect(second).toBeUndefined();
+  });
+
+  /**
+   * Selling.
+   *
+   * The failure modes here are quiet ones — a sell filed against the wrong mint,
+   * or average cost applied to the wrong denominator — so these check the numbers
+   * rather than the status codes.
+   */
+  describe("selling", () => {
+    const signIn = async () => {
+      const response = await SELF.fetch(
+        "https://local.test/api/auth/sign-in/anonymous",
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            origin: "neonreserve://",
+          },
+          body: "{}",
+        },
+      );
+      const cookie = response.headers.get("set-cookie") ?? "";
+      const me = await SELF.fetch("https://local.test/v1/me", {
+        headers: { cookie },
+      });
+      const { profile } = (await me.json()) as { profile: { id: string } };
+      return { cookie, userId: profile.id };
+    };
+
+    const MINT = "XsDoVfqeBukxuZHWhdvWHBhgEHjGNst4MLodqsJHzoB";
+
+    /** Writes a settled row straight to the table, which is what verification leaves behind. */
+    const settle = (
+      userId: string,
+      direction: "buy" | "sell",
+      units: string,
+      usdcBaseUnits: string,
+      signature: string,
+    ) =>
+      env.DB.prepare(
+        `INSERT INTO contributions
+           (id, user_id, wallet_address, signature, asset_symbol, asset_mint, asset_decimals,
+            amount_base_units, verified_amount_base_units, input_amount_usdc_base_units,
+            status, direction, execution_mode, verified_at, occurred_at)
+         VALUES (?, ?, 'wallet', ?, 'SPYx', ?, 9, ?, ?, ?, 'verified', ?, 'live',
+                 CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+      )
+        .bind(
+          `contribution_${signature}`,
+          userId,
+          signature,
+          MINT,
+          units,
+          units,
+          usdcBaseUnits,
+          direction,
+        )
+        .run();
+
+    it("refuses a sell without a verified wallet", async () => {
+      const { cookie } = await signIn();
+      const response = await SELF.fetch(
+        "https://local.test/v1/trades/sell-order",
+        {
+          method: "POST",
+          headers: { "content-type": "application/json", cookie },
+          body: JSON.stringify({
+            inputMint: MINT,
+            quantity: 1,
+            taker: "7cVfgArCheMR6Cs4t6vz5rfnqd56vZq4ndaBrY5xkxXy",
+          }),
+        },
+      );
+      expect(response.status).toBe(403);
+    });
+
+    /**
+     * The invariant the whole feature rests on: two buys at different prices, then
+     * a partial sale, and every figure has to move to the right place.
+     *
+     * 10 units for $100 and 10 for $300 is an average of $20/unit. Selling 5 for
+     * $150 realises 150 − (5 × 20) = $50 and leaves 15 units at a $300 basis.
+     * Cost must fall to the basis of what remains — NOT stay at total spend, which
+     * is the bug that makes unrealised P&L lie the moment anything is sold.
+     */
+    it("keeps average cost and realised P&L straight across a partial sale", async () => {
+      const { cookie, userId } = await signIn();
+      await settle(
+        userId,
+        "buy",
+        "10000000000",
+        "100000000",
+        `buy_a_${userId}`,
+      );
+      await settle(
+        userId,
+        "buy",
+        "10000000000",
+        "300000000",
+        `buy_b_${userId}`,
+      );
+      await settle(
+        userId,
+        "sell",
+        "5000000000",
+        "150000000",
+        `sell_a_${userId}`,
+      );
+
+      const response = await SELF.fetch("https://local.test/v1/portfolio", {
+        headers: { cookie },
+      });
+      expect(response.status).toBe(200);
+      const { portfolio } = (await response.json()) as {
+        portfolio: {
+          totals: { realisedUsd: number; costUsd: number; positions: number };
+          positions: Array<{
+            quantity: number;
+            costUsd: number;
+            avgCostUsd: number | null;
+            realisedUsd: number;
+            proceedsUsd: number;
+            lots: number;
+            sells: number;
+            open: boolean;
+          }>;
+        };
+      };
+
+      const position = portfolio.positions[0]!;
+      expect(position.quantity).toBeCloseTo(15, 6);
+      expect(position.costUsd).toBeCloseTo(300, 6);
+      expect(position.avgCostUsd).toBeCloseTo(20, 6);
+      expect(position.realisedUsd).toBeCloseTo(50, 6);
+      expect(position.proceedsUsd).toBeCloseTo(150, 6);
+      expect(position.lots).toBe(2);
+      expect(position.sells).toBe(1);
+      expect(position.open).toBe(true);
+      expect(portfolio.totals.realisedUsd).toBeCloseTo(50, 6);
+      expect(portfolio.totals.costUsd).toBeCloseTo(300, 6);
+    });
+
+    /**
+     * A position sold down to nothing keeps its row and its realised P&L, but stops
+     * counting as a holding. Dropping it would quietly erase the trade from history.
+     */
+    it("keeps a fully sold position out of holdings but keeps its realised P&L", async () => {
+      const { cookie, userId } = await signIn();
+      await settle(userId, "buy", "4000000000", "80000000", `buy_c_${userId}`);
+      await settle(
+        userId,
+        "sell",
+        "4000000000",
+        "95000000",
+        `sell_c_${userId}`,
+      );
+
+      const response = await SELF.fetch("https://local.test/v1/portfolio", {
+        headers: { cookie },
+      });
+      const { portfolio } = (await response.json()) as {
+        portfolio: {
+          totals: { positions: number; costUsd: number; realisedUsd: number };
+          positions: Array<{
+            open: boolean;
+            quantity: number;
+            realisedUsd: number;
+          }>;
+        };
+      };
+
+      expect(portfolio.positions).toHaveLength(1);
+      expect(portfolio.positions[0]!.open).toBe(false);
+      expect(portfolio.positions[0]!.quantity).toBeCloseTo(0, 6);
+      expect(portfolio.positions[0]!.realisedUsd).toBeCloseTo(15, 6);
+      // No open holdings, so nothing to have a cost basis.
+      expect(portfolio.totals.positions).toBe(0);
+      expect(portfolio.totals.costUsd).toBeCloseTo(0, 6);
+      expect(portfolio.totals.realisedUsd).toBeCloseTo(15, 6);
+    });
+
+    /**
+     * Sells share the contributions table and store their PROCEEDS in the same
+     * column a buy uses for SPEND. Every reader that means "money in" therefore has
+     * to say so, and the widget is the one that shows it to the reader every day.
+     * Without the filter, selling reads as depositing.
+     */
+    it("does not count a sell as money put in", async () => {
+      const { cookie, userId } = await signIn();
+      await settle(userId, "buy", "1000000000", "20000000", `w_buy_${userId}`);
+      await settle(userId, "sell", "500000000", "90000000", `w_sell_${userId}`);
+
+      const response = await SELF.fetch("https://local.test/v1/widget/snapshot", {
+        headers: { cookie },
+      });
+      expect(response.status).toBe(200);
+      const { snapshot } = (await response.json()) as {
+        snapshot: { summary: { contributions: { monthUsd: number; recentUsd: number[] } } };
+      };
+
+      // The $20 buy, and nothing from the $90 sale.
+      expect(snapshot.summary.contributions.monthUsd).toBeCloseTo(20, 6);
+      expect(snapshot.summary.contributions.recentUsd).toEqual([20]);
+    });
+
+    /** A sell is not an achievement: it must never close a week or reach a feed. */
+    it("does not let a sell close a weekly promise", async () => {
+      const { cookie, userId } = await signIn();
+      const goal = await SELF.fetch("https://local.test/v1/goals", {
+        method: "POST",
+        headers: { "content-type": "application/json", cookie },
+        body: JSON.stringify({
+          title: "Reserve",
+          targetValue: 12,
+          weeklyTargetCents: 2000,
+        }),
+      });
+      expect(goal.status).toBe(201);
+      const { id: goalId } = (await goal.json()) as { id: string };
+
+      await env.DB.prepare(
+        `INSERT INTO weekly_promises (id, goal_id, user_id, week_start, due_at, target_cents)
+         VALUES (?, ?, ?, date('now'), datetime('now', '+2 days'), 2000)`,
+      )
+        .bind(`promise_sell_${userId}`, goalId, userId)
+        .run();
+
+      await settle(
+        userId,
+        "sell",
+        "1000000000",
+        "25000000",
+        `sell_promise_${userId}`,
+      );
+
+      const promise = await env.DB.prepare(
+        "SELECT completed_at FROM weekly_promises WHERE id = ?",
+      )
+        .bind(`promise_sell_${userId}`)
+        .first<{ completed_at: string | null }>();
+      expect(promise?.completed_at).toBeNull();
+    });
   });
 });

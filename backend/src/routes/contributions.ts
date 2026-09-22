@@ -11,7 +11,7 @@ export const contributionRoutes = new Hono<{
 
 contributionRoutes.get("/", async (c) => {
   const result = await c.env.DB.prepare(
-    "SELECT id, goal_id, signature, asset_symbol, asset_mint, amount_base_units, status, failure_reason, occurred_at, created_at FROM contributions WHERE user_id = ? ORDER BY created_at DESC LIMIT 50",
+    "SELECT id, goal_id, signature, asset_symbol, asset_mint, amount_base_units, direction, status, failure_reason, occurred_at, created_at FROM contributions WHERE user_id = ? ORDER BY created_at DESC LIMIT 50",
   )
     .bind(c.get("userId"))
     .all();
@@ -80,7 +80,7 @@ contributionRoutes.post("/", async (c) => {
 
 contributionRoutes.get("/:contributionId", async (c) => {
   const contribution = await c.env.DB.prepare(
-    "SELECT id, goal_id, signature, asset_symbol, asset_mint, amount_base_units, status, failure_reason, occurred_at, created_at FROM contributions WHERE id = ? AND user_id = ?",
+    "SELECT id, goal_id, signature, asset_symbol, asset_mint, amount_base_units, direction, status, failure_reason, occurred_at, created_at FROM contributions WHERE id = ? AND user_id = ?",
   )
     .bind(c.req.param("contributionId"), c.get("userId"))
     .first();

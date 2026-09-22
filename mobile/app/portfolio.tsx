@@ -13,14 +13,16 @@
  */
 
 import { useRouter } from 'expo-router'
+import { useState } from 'react'
 import { ActivityIndicator, StyleSheet, View } from 'react-native'
-import { Card, Chip, IconButton, Row, Screen, SectionHeader, T } from '@/components/ui'
+import { Button, Card, Chip, IconButton, Row, Screen, SectionHeader, T } from '@/components/ui'
 import { space } from '@/constants/theme'
 import { makeThemedStyles, useAppTheme } from '@/components/theme-provider'
 import { IconPlate } from '@/design/icons'
 import { Illustration } from '@/design/illustrations'
 import { Object3D } from '@/design/objects'
 import { AssetLogo } from '@/features/trade/asset-logo'
+import { SellSheet } from '@/features/trade/sell-sheet'
 import { type Position, quantity, signedPct, signedUsd, usd, usePortfolio } from '@/features/portfolio/portfolio-api'
 
 export default function PortfolioScreen() {
@@ -28,6 +30,7 @@ export default function PortfolioScreen() {
   const styles = useStyles()
   const router = useRouter()
   const portfolio = usePortfolio()
+  const [selling, setSelling] = useState<Position | null>(null)
 
   const data = portfolio.data?.portfolio
   const totals = data?.totals
@@ -98,7 +101,7 @@ export default function PortfolioScreen() {
             />
             <View style={styles.positions}>
               {positions.map((position) => (
-                <PositionCard key={position.mint} position={position} />
+                <PositionCard key={position.mint} position={position} onSell={() => setSelling(position)} />
               ))}
             </View>
           </View>
@@ -130,11 +133,13 @@ export default function PortfolioScreen() {
           </T>
         </View>
       </Card>
+
+      <SellSheet position={selling} onClose={() => setSelling(null)} />
     </Screen>
   )
 }
 
-function PositionCard({ position }: { position: Position }) {
+function PositionCard({ position, onSell }: { position: Position; onSell: () => void }) {
   const { colors } = useAppTheme()
   const styles = useStyles()
   const gain = position.pnlUsd
@@ -172,6 +177,29 @@ function PositionCard({ position }: { position: Position }) {
           )}
         </View>
       </Row>
+
+      {/*
+        Realised P&L only appears once something has actually been sold. Showing a
+        "$0.00 realised" line on every untouched position would imply a loss.
+      */}
+      {position.sells > 0 ? (
+        <Row style={styles.realised}>
+          <T role="caption" color={colors.inkFaint}>
+            Sold {position.soldQuantity === null ? '' : `${quantity(position.soldQuantity)} · `}
+            realised
+          </T>
+          <T role="caption" color={position.realisedUsd >= 0 ? colors.kiwiDeep : colors.coralDeep}>
+            {signedUsd(position.realisedUsd)}
+          </T>
+        </Row>
+      ) : null}
+
+      {/*
+        Selling is deliberately quiet: a secondary button under the numbers, never
+        a primary action competing with the week's promise. The product is about
+        putting money in — getting it out has to be possible, not encouraged.
+      */}
+      {position.open ? <Button label="Sell" variant="secondary" tone="neutral" onPress={onSell} /> : null}
     </Card>
   )
 }
@@ -212,6 +240,7 @@ const useStyles = makeThemedStyles((colors) =>
 
     section: { gap: space[3] },
     positions: { gap: space[2] },
+    realised: { justifyContent: 'space-between' },
     position: { paddingVertical: space[4] },
     positionTop: { gap: space[3] },
     positionCopy: { flex: 1, gap: 2 },
