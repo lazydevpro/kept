@@ -8,6 +8,8 @@
 | | |
 |---|---|
 | Landing page | <https://keptapp.pages.dev> |
+| Try it | [Download the Android beta (APK, 81 MB)](https://github.com/lazydevpro/kept/releases/download/v1.0.0/kept-1.0.0.apk) · [release notes](https://github.com/lazydevpro/kept/releases/tag/v1.0.0) |
+| Status | Public beta — coming to the Solana dApp Store |
 | Platform | Android, built for Solana Mobile and the Seeker |
 | Chain | Solana mainnet |
 | Assets | Tokenized stocks and ETFs via xStocks · private markets via **Tessera** |
@@ -24,6 +26,26 @@ you before your day runs out, tells your friends the moment you follow through, 
 them cheer you on or nudge you while your week is still open. Your streak is real: it's
 backed by an actual purchase, not a checkbox you ticked. And nobody sees a balance, a
 holding or a dollar figure unless you decide they should.
+
+---
+
+## Try it
+
+KEPT is in public beta on Android, and it's live on Solana mainnet.
+
+**[Download the beta (APK, 81 MB)](https://github.com/lazydevpro/kept/releases/download/v1.0.0/kept-1.0.0.apk)**
+— or open [keptapp.pages.dev](https://keptapp.pages.dev) on your phone and tap *Get the Android beta*.
+
+1. Open the download on an Android phone — a Solana Seeker, or any phone on Android 7.0 or
+   newer — and allow the install when Android asks.
+2. Have a Solana wallet app ready: Seed Vault on the Seeker, Phantom or Solflare.
+3. Set your goal and your weekly promise, connect your wallet, and keep week one.
+
+It's a beta with real money: every purchase is real USDC from your own wallet, so start with
+a dollar or two. Buying isn't available to U.S. persons or in a few restricted countries —
+the issuers of these assets don't allow it ([terms](https://keptapp.pages.dev/terms)) —
+but setting a goal, joining a circle and cheering friends on work everywhere. KEPT is
+coming to the Solana dApp Store; until then, the APK is the way in.
 
 ---
 
