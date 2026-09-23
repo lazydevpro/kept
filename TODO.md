@@ -165,11 +165,18 @@ room — a reaction posted over HTTP arrives on the socket as `reaction.added`.
       account deletion, sign-in limit 20 then 429 #backend
 - [x] Site deployed with `/terms`, `/privacy`, `/join`; a real production invite renders on the
       live join page, a bogus one says it expired #web
-- [ ] `npx eas login && npx eas init` in `mobile/` → `extra.eas.projectId`; unblocks builds and
-      push. Then `eas build -p android --profile production` (APK, mainnet, production API) #mobile
-- [ ] After the first EAS build: paste the signing cert's SHA-256 (`npx eas credentials -p android`)
-      into `web/public/.well-known/assetlinks.json` and redeploy the site, so invite links open
-      the app instead of the browser. `autoVerify` is already on #mobile #web
+- [x] EAS project linked (`@lazydevpro/neon-reserve`, `extra.eas.projectId` in app.json) #mobile
+- [x] Release APK 1.0.0 built locally (`npm run release:apk`), signed with a release key kept
+      in `~/.kept/android/` — outside the repo. Its fingerprint is in `assetlinks.json`.
+      Template permissions KEPT never uses (display over other apps, legacy storage) blocked #mobile
+- [ ] **Back up `~/.kept/android/`** (keystore + passwords). Lose it and no future release can
+      update an installed copy #mobile
+- [ ] Upload the key to EAS (`npx eas-cli credentials -p android`, production → upload) so cloud
+      builds sign with the same certificate #mobile
+- [ ] Redeploy the site so `assetlinks.json` carries the fingerprint — invite links only open
+      the app once it does #web
+- [ ] Push notifications need FCM: add `google-services.json` (Firebase project) and an
+      `EXPO_ACCESS_TOKEN` secret on the Worker #notifications
 - [ ] **Device pass with real money**: connect → sign in with wallet → buy $1 → verified → sell →
       settled; plus reinstall → "I already use KEPT" → same account back. Nothing wallet-side has
       run on a phone since 15 Sep #verify

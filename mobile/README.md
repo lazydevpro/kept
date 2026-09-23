@@ -62,3 +62,13 @@ npx expo export --platform android --output-dir dist
 ```
 
 See [brand.md](./brand.md) for the visual system and [../.superstack/build-context.md](../.superstack/build-context.md) for architecture and implementation status.
+
+## Release APK
+
+```bash
+npm run release:apk
+```
+
+Builds a mainnet APK pointed at the production API, signs it with the release key and checks both. The key is **not** in the repo: it lives in `~/.kept/android/` (`kept-release.jks`, `keystore.properties`). Back it up — every future release must be signed with it or phones refuse the update. Upload it to EAS with `npx eas-cli credentials -p android` so cloud builds (`npm run build:production`) sign with the same key.
+
+Its SHA-256 fingerprint is published in `web/public/.well-known/assetlinks.json`, which is what lets invite links on `keptapp.pages.dev/join/…` open the app directly.
