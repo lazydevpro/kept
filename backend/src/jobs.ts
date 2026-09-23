@@ -1,5 +1,17 @@
 import type { AppEnv, Job, PushJob } from "./types";
 import { id } from "./lib/http";
+import { rpcUrl } from "./lib/solana";
+
+/**
+ * How long a signature may go unseen before it is presumed never to have landed.
+ *
+ * A Solana transaction is only valid for ~150 blocks (60–90 seconds) after its
+ * blockhash. Past that it can never be included, so "not found" stops meaning
+ * "not yet" and starts meaning "never". Ten minutes is several times that
+ * window, which leaves room for a lagging RPC without leaving a purchase that
+ * failed to land sitting at "pending" forever.
+ */
+const NEVER_LANDED_MS = 10 * 60_000;
 
 interface RpcTransaction {
   blockTime: number | null;
@@ -30,7 +42,7 @@ async function rpc<T>(
   method: string,
   params: unknown[],
 ): Promise<T> {
-  const response = await fetch(env.SOLANA_RPC_URL, {
+  const response = await fetch(rpcUrl(env), {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
@@ -168,6 +180,36 @@ export async function queueHoldingsBackfill(env: AppEnv, limit = 100) {
   return pending.results.length;
 }
 
+/**
+ * Re-queues verification for anything still pending after two minutes.
+ *
+ * Verification is queued once, when the signature is submitted, and a queue
+ * message gives up after its retries — about a minute of backoff. An RPC outage
+ * or a slow confirmation that outlasted that minute used to leave the row at
+ * "pending" for good: the money spent, the week never kept, and the app's
+ * settlement banner quietly giving up. Every five minutes this picks those rows
+ * back up; `verifyContribution` settles them either way, including rejecting a
+ * transaction that never landed.
+ *
+ * Bounded per run so a backlog drains over several runs rather than all at once.
+ */
+export async function sweepPendingContributions(env: AppEnv, limit = 100) {
+  const stuck = await env.DB.prepare(
+    `SELECT id FROM contributions
+     WHERE status = 'pending' AND created_at <= datetime('now', '-2 minutes')
+     ORDER BY created_at ASC LIMIT ?`,
+  )
+    .bind(limit)
+    .all<{ id: string }>();
+  for (const row of stuck.results) {
+    await env.JOBS.send({
+      kind: "verify_contribution",
+      contributionId: row.id,
+    } satisfies Job);
+  }
+  return stuck.results.length;
+}
+
 async function verifyContribution(env: AppEnv, contributionId: string) {
   const contribution = await env.DB.prepare(
     "SELECT * FROM contributions WHERE id = ? AND status = ?",
@@ -184,7 +226,24 @@ async function verifyContribution(env: AppEnv, contributionId: string) {
       maxSupportedTransactionVersion: 0,
     },
   ]);
-  if (!transaction) throw new Error("Transaction is not confirmed yet");
+  if (!transaction) {
+    // SQLite's CURRENT_TIMESTAMP is "YYYY-MM-DD HH:MM:SS", in UTC, with no zone.
+    const age =
+      Date.now() -
+      Date.parse(`${String(contribution.created_at).replace(" ", "T")}Z`);
+    if (age > NEVER_LANDED_MS) {
+      await env.DB.prepare(
+        "UPDATE contributions SET status = 'rejected', failure_reason = ? WHERE id = ? AND status = 'pending'",
+      )
+        .bind(
+          "The transaction never confirmed on-chain, so nothing was bought or counted.",
+          contributionId,
+        )
+        .run();
+      return;
+    }
+    throw new Error("Transaction is not confirmed yet");
+  }
 
   const keys = transaction.transaction.message.accountKeys.map((key) =>
     typeof key === "string" ? key : key.pubkey,
@@ -224,7 +283,7 @@ async function verifyContribution(env: AppEnv, contributionId: string) {
       : Boolean(contribution.asset_mint) && moved > 0n);
   if (!valid) {
     await env.DB.prepare(
-      "UPDATE contributions SET status = 'rejected', failure_reason = ? WHERE id = ?",
+      "UPDATE contributions SET status = 'rejected', failure_reason = ? WHERE id = ? AND status = 'pending'",
     )
       .bind(
         sandbox
@@ -242,15 +301,22 @@ async function verifyContribution(env: AppEnv, contributionId: string) {
     ? new Date(transaction.blockTime * 1000).toISOString()
     : new Date().toISOString();
 
-  await env.DB.prepare(
+  /*
+   * `AND status = 'pending'` makes this the claim. The sweeper re-queues rows
+   * that look stuck, so the same contribution can be verified by two consumers
+   * at once — and both used to go on to post "Kept this week's promise" to every
+   * circle. Whichever write lands second changes nothing and stops here.
+   */
+  const claimed = await env.DB.prepare(
     `UPDATE contributions
      SET status = 'verified', verified_at = CURRENT_TIMESTAMP, occurred_at = ?,
          verified_amount_base_units = ?, asset_decimals = ?,
          holdings_checked_at = CURRENT_TIMESTAMP
-     WHERE id = ?`,
+     WHERE id = ? AND status = 'pending'`,
   )
     .bind(occurredAt, moved.toString(), decimals ?? null, contributionId)
     .run();
+  if (!claimed.meta.changes) return;
 
   /*
    * Everything below is the social half, and a sell gets none of it.

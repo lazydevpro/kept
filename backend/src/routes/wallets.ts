@@ -1,9 +1,9 @@
-import { ed25519 } from "@noble/curves/ed25519.js";
 import bs58 from "bs58";
 import { Hono } from "hono";
 import { z } from "zod";
 import { ApiError, id } from "../lib/http";
 import { parseJson } from "../lib/validation";
+import { walletSigned } from "../lib/wallet-signature";
 import type { AppEnv, Variables } from "../types";
 
 export const walletRoutes = new Hono<{
@@ -23,8 +23,11 @@ walletRoutes.post("/challenge", async (c) => {
   }
   const challengeId = id("challenge");
   const expiresAt = new Date(Date.now() + 5 * 60_000).toISOString();
+  // One message for both uses: linking this wallet, and signing in with it on a
+  // device where it is already linked (`src/wallet-sign-in.ts`). The reader is
+  // asked to sign once whichever it turns out to be.
   const message = [
-    "Link this wallet to KEPT.",
+    "Use this wallet with KEPT.",
     "",
     `Wallet: ${body.address}`,
     `Challenge: ${challengeId}`,
@@ -59,26 +62,13 @@ walletRoutes.post("/verify", async (c) => {
       "This wallet challenge expired. Request a new one.",
     );
   }
-  let valid = false;
-  try {
-    const signedPayload = body.signature.includes("=")
-      ? Uint8Array.from(atob(body.signature), (character) =>
-          character.charCodeAt(0),
-        )
-      : bs58.decode(body.signature);
-    const message = new TextEncoder().encode(String(challenge.message));
-    const publicKey = bs58.decode(String(challenge.address));
-    const candidates =
-      signedPayload.length === 64
-        ? [signedPayload]
-        : [signedPayload.slice(0, 64), signedPayload.slice(-64)];
-    valid = candidates.some((signature) =>
-      ed25519.verify(signature, message, publicKey),
-    );
-  } catch {
-    valid = false;
-  }
-  if (!valid)
+  if (
+    !walletSigned(
+      String(challenge.address),
+      String(challenge.message),
+      body.signature,
+    )
+  )
     throw new ApiError(422, "The wallet signature could not be verified.");
   const existing = await c.env.DB.prepare(
     "SELECT id, user_id FROM wallet_connections WHERE address = ?",
@@ -95,6 +85,19 @@ walletRoutes.post("/verify", async (c) => {
       wallet: { id: existing.id, address: challenge.address, verified: true },
     });
   }
+  if (existing) {
+    /*
+     * The wallet is someone's — almost always the reader's own earlier account,
+     * from before a reinstall or a new phone. The challenge is deliberately NOT
+     * consumed: the app offers to switch to that account and completes it at
+     * `/api/auth/sign-in/wallet` with the signature it already has.
+     */
+    throw new ApiError(
+      409,
+      "This wallet is already linked to another KEPT account.",
+      "wallet_linked_elsewhere",
+    );
+  }
   const walletId = id("wallet");
   try {
     await c.env.DB.batch([
@@ -106,10 +109,30 @@ walletRoutes.post("/verify", async (c) => {
       ).bind(walletId, c.get("userId"), challenge.address),
     ]);
   } catch {
-    throw new ApiError(409, "That wallet is already linked to an account.");
+    // Lost a race with another link of the same wallet.
+    throw new ApiError(
+      409,
+      "This wallet is already linked to another KEPT account.",
+      "wallet_linked_elsewhere",
+    );
   }
   return c.json(
     { wallet: { id: walletId, address: challenge.address, verified: true } },
     201,
   );
+});
+
+/**
+ * Unlink. Purchases already made from the wallet stay in the portfolio — they
+ * happened — but nothing new can be bought or sold through it, and it can be
+ * linked to a different account afterwards.
+ */
+walletRoutes.delete("/:address", async (c) => {
+  const result = await c.env.DB.prepare(
+    "DELETE FROM wallet_connections WHERE user_id = ? AND address = ?",
+  )
+    .bind(c.get("userId"), c.req.param("address"))
+    .run();
+  if (!result.meta.changes) throw new ApiError(404, "Wallet not found.");
+  return c.body(null, 204);
 });

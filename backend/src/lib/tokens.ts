@@ -15,7 +15,8 @@ import type { AppEnv } from "../types";
  */
 
 const KEYED_URL = "https://api.jup.ag/tokens/v2/search";
-const FREE_URL = "https://lite-api.jup.ag/tokens/v2/search";
+/** Keyless goes to the same host now — `lite-api.jup.ag` is being retired. */
+const FREE_URL = KEYED_URL;
 /** Same cap the price lookup uses; the query is a URL, not a body. */
 const IDS_PER_REQUEST = 50;
 const TIMEOUT_MS = 4000;

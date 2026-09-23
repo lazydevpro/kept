@@ -6,13 +6,17 @@ import type { AppEnv } from "../types";
  * Shared by the portfolio and the asset catalog so the two can never disagree
  * about what something is worth.
  *
- * No wallet and no key are required: without JUPITER_API_KEY this uses the free
- * tier, which is rate limited but fine for per-user reads. A key raises the
- * limits and is the same endpoint otherwise.
+ * No wallet and no key are required: without JUPITER_API_KEY the request goes
+ * out keyless, which Jupiter allows at 0.5 req/s — enough for local work, not
+ * for production. A key raises the limit on the same endpoint.
+ *
+ * Keyless used to mean `lite-api.jup.ag`. Jupiter is retiring that host by
+ * cutting its rate limit until it is gone; keyless requests now go to
+ * `api.jup.ag` itself.
  */
 
 const KEYED_URL = "https://api.jup.ag/price/v3";
-const FREE_URL = "https://lite-api.jup.ag/price/v3";
+const FREE_URL = KEYED_URL;
 /** Jupiter caps the `ids` list; stay well under it. */
 const IDS_PER_REQUEST = 50;
 const TIMEOUT_MS = 4000;

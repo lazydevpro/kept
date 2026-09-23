@@ -20,7 +20,13 @@ export async function authenticated(
   )
     .bind(
       session.user.id,
-      session.user.name || `Member ${session.user.id.slice(-4).toUpperCase()}`,
+      // An anonymous account's auth name is the literal "Anonymous", so taking it
+      // made every member of every circle "Anonymous". Distinguishable until the
+      // reader picks a name, which onboarding and Account both ask for.
+      (session.user as { isAnonymous?: boolean }).isAnonymous
+        ? `Member ${session.user.id.slice(-4).toUpperCase()}`
+        : session.user.name ||
+            `Member ${session.user.id.slice(-4).toUpperCase()}`,
     )
     .run();
   c.set("userId", session.user.id);

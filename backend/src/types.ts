@@ -8,6 +8,8 @@ export interface Secrets {
   APPLE_CLIENT_SECRET?: string;
   EXPO_ACCESS_TOKEN?: string;
   JUPITER_API_KEY?: string;
+  /** A paid RPC URL, which carries its provider's key. See `lib/solana.ts`. */
+  PRIVATE_RPC_URL?: string;
 }
 
 export type AppEnv = Env & Secrets;

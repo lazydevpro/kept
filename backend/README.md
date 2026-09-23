@@ -18,16 +18,16 @@ layer in the app. The mints are **real mainnet mints at their real 9 decimals**,
 so the portfolio prices them against live Jupiter quotes; only the purchases
 themselves are synthetic, because a real holding needs a real on-chain buy.
 
-An account-neutral Cloudflare Worker backend designed to run entirely in local emulation until a Cloudflare account is deliberately selected.
+The Cloudflare Worker behind the app. Three environments: `local` (wrangler dev and the tests), `staging` (devnet, `neon-reserve-api-staging.lazydevpro.workers.dev`) and `production` (mainnet, `kept-api.lazydevpro.workers.dev`).
 
 ## Services
 
 - D1 stores identity, privacy, goals, promises, circles, invitations, reactions, wallet links, orders, and contribution state.
 - A Durable Object provides one hibernating WebSocket room per circle. Important data is always persisted in D1.
-- A Queue verifies Solana transactions, generates R2 share cards, and sends opt-in push notifications.
-- R2 stores generated share cards and future avatar uploads.
-- Better Auth supplies anonymous mobile onboarding and optional Google/Apple upgrades.
-- A weekly Cron trigger queues gentle promise reminders.
+- A second Durable Object, `RateLimiter`, counts sign-ins per address and Jupiter-backed quotes per user — exactly, which Cloudflare's Rate Limiting binding did not (see `src/rate-limiter.ts`).
+- A Queue verifies Solana transactions and sends opt-in push notifications.
+- Better Auth supplies anonymous onboarding, a one-year session, and sign-in with a linked wallet (`src/wallet-sign-in.ts`) so an account survives a reinstall.
+- Cron: nightly reminders and holdings backfill; every five minutes, re-verification of purchases still pending after two minutes.
 
 ## Local development
 
@@ -61,22 +61,29 @@ Prettier has no SQL parser for the second.
 
 The test suite runs against local Workers runtime bindings and applies the D1 migrations in isolation.
 
-## Connecting a different Cloudflare account later
+## Deploying
 
-Only after switching to the intended account:
+```bash
+npm run deploy:staging      # check → migrate staging D1 → deploy
+npm run deploy:production   # check → migrate production D1 → deploy
+```
 
-1. Authenticate Wrangler in that account.
-2. Create one D1 database, one R2 bucket, and one Queue using the logical names in `wrangler.jsonc`.
-3. Add the returned D1 `database_id` to the D1 binding. Add an `account_id` only if your environment requires it.
-4. Add secrets with Wrangler: `BETTER_AUTH_SECRET`, `JUPITER_API_KEY`, and any optional social-login or Expo push credentials.
-5. Change `ENVIRONMENT` to `production`, `SOLANA_CLUSTER` to `mainnet-beta`, and `SOLANA_RPC_URL` to a production RPC.
-6. Apply migrations remotely, choose a route or workers.dev hostname, then replace the deployment guard in `scripts/deploy-guard.mjs` only when ready.
+A bare `npm run deploy` refuses: without `--env` it would publish the `local` config.
 
-There are deliberately no real account IDs, resource IDs, tokens, routes, or deployed hostnames in this repository.
+Secrets, per environment (`npx wrangler secret put <NAME> --env <env>`):
+
+| Secret               |                                                                                                                                                                                      |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `BETTER_AUTH_SECRET` | Required. 32+ random characters, different per environment.                                                                                                                          |
+| `JUPITER_API_KEY`    | Required to trade on mainnet. From [developers.jup.ag](https://developers.jup.ag/portal); the free key is 1 req/s. Without it, buys and sells refuse with `provider_not_configured`. |
+| `PRIVATE_RPC_URL`    | Strongly recommended on mainnet. A paid RPC URL (Helius, Triton…) — the public endpoint rate-limits the `getTransaction` calls verification rests on.                                |
+| `EXPO_ACCESS_TOKEN`  | Optional, for push.                                                                                                                                                                  |
+
+Production's D1 (`kept-production`) and queue (`kept-jobs`) exist. Staging's are `neon-reserve-staging` and `neon-reserve-jobs-staging`.
 
 ## Trading boundary
 
-`GET /v1/trades/assets` resolves current Solana token addresses from the xStocks public asset API and supplies the verified official Tessera mints for T-OpenAI and T-Kalshi. `POST /v1/trades/order` validates that metadata before requesting a Jupiter Swap V2 transaction. The mobile wallet signs the transaction; `POST /v1/trades/execute` submits it to Jupiter. A successful response still enters the contribution-verification queue before it affects goals or social activity.
+`GET /v1/trades/assets` resolves current Solana token addresses from the xStocks public asset API and Tessera's T-Tokens from its public catalogue, falling back to the three verified mints (T-OpenAI, T-Kalshi, T-SpaceX) when that API is down. `POST /v1/trades/order` requires the buyer to have accepted the current terms (`src/lib/terms.ts`) — selling never does — and validates that metadata before requesting a Jupiter Swap V2 transaction. The mobile wallet signs the transaction; `POST /v1/trades/execute` submits it to Jupiter. A successful response still enters the contribution-verification queue before it affects goals or social activity.
 
 This flow is mainnet-only because both xStocks and Tessera T-Tokens are unavailable on Solana devnet. Local requests return a clear `mainnet_required` error instead of simulating a purchase. Tessera orders require an explicit high-risk acknowledgment and make no claim that a T-Token is company equity.
 

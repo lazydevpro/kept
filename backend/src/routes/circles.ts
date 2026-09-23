@@ -371,6 +371,79 @@ circleRoutes.post("/:circleId/members/:memberId/nudge", async (c) => {
   return c.json({ nudged: true, weekStart: open.week_start }, 201);
 });
 
+/**
+ * Leave a circle, or — for its owner — remove someone from it.
+ *
+ * `memberId` may be your own id, which is leaving, and anyone may do that. Only
+ * the owner may remove somebody else, and the owner is never removed by anyone
+ * but themselves.
+ *
+ * An owner who leaves hands the circle to its longest-standing member rather
+ * than taking it with them; the last person out deletes it. Posts they wrote in
+ * the feed go with them, because a feed that still shows "Maya kept her promise"
+ * after Maya left is showing people something she no longer shares with them.
+ */
+circleRoutes.delete("/:circleId/members/:memberId", async (c) => {
+  const circleId = c.req.param("circleId");
+  const target = c.req.param("memberId");
+  const userId = c.get("userId");
+
+  const me = await requireMember(c.env, circleId, userId);
+  const leaving = target === userId;
+  if (!leaving && me.role !== "owner")
+    throw new ApiError(
+      403,
+      "Only the circle's owner can remove someone.",
+      "not_owner",
+    );
+  const them = leaving ? me : await requireMember(c.env, circleId, target);
+
+  const heir =
+    them.role === "owner"
+      ? await c.env.DB.prepare(
+          `SELECT user_id FROM circle_members WHERE circle_id = ? AND user_id != ?
+           ORDER BY joined_at ASC LIMIT 1`,
+        )
+          .bind(circleId, target)
+          .first<{ user_id: string }>()
+      : null;
+
+  if (them.role === "owner" && !heir) {
+    await c.env.DB.prepare("DELETE FROM circles WHERE id = ?")
+      .bind(circleId)
+      .run();
+    return c.json({ left: true, circleDeleted: true });
+  }
+
+  await c.env.DB.batch([
+    ...(heir
+      ? [
+          c.env.DB.prepare(
+            "UPDATE circles SET owner_user_id = ? WHERE id = ?",
+          ).bind(heir.user_id, circleId),
+          c.env.DB.prepare(
+            "UPDATE circle_members SET role = 'owner' WHERE circle_id = ? AND user_id = ?",
+          ).bind(circleId, heir.user_id),
+        ]
+      : []),
+    c.env.DB.prepare(
+      "DELETE FROM circle_members WHERE circle_id = ? AND user_id = ?",
+    ).bind(circleId, target),
+    c.env.DB.prepare(
+      "DELETE FROM activity_posts WHERE circle_id = ? AND user_id = ?",
+    ).bind(circleId, target),
+    c.env.DB.prepare(
+      "UPDATE invites SET revoked_at = CURRENT_TIMESTAMP WHERE circle_id = ? AND created_by = ? AND revoked_at IS NULL",
+    ).bind(circleId, target),
+  ]);
+
+  await broadcast(c.env, circleId, {
+    type: "member.left",
+    userId: target,
+  });
+  return c.json({ left: true, circleDeleted: false });
+});
+
 circleRoutes.get("/:circleId/live", async (c) => {
   const circleId = c.req.param("circleId");
   await requireMember(c.env, circleId, c.get("userId"));

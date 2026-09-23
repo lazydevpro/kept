@@ -5,6 +5,7 @@ import { anonymous } from "better-auth/plugins";
 import { drizzle } from "drizzle-orm/d1";
 import { authSchema } from "./db/auth-schema";
 import type { AppEnv } from "./types";
+import { walletSignIn } from "./wallet-sign-in";
 
 export function createAuth(env: AppEnv, requestUrl: string) {
   const origin = new URL(requestUrl).origin;
@@ -36,6 +37,14 @@ export function createAuth(env: AppEnv, requestUrl: string) {
       schema: authSchema,
     }),
     socialProviders,
+    /*
+     * A year, refreshed daily while the app is in use. The default is seven days,
+     * which on a WEEKLY habit app meant that skipping a single week signed you
+     * out — and an anonymous account that is signed out is gone, because the
+     * session was the only thing that knew who you were. Wallet sign-in is the
+     * way back now, but nobody should need it for missing one Friday.
+     */
+    session: { expiresIn: 60 * 60 * 24 * 365, updateAge: 60 * 60 * 24 },
     trustedOrigins: [
       env.APP_ORIGIN,
       "neonreserve://",
@@ -45,7 +54,7 @@ export function createAuth(env: AppEnv, requestUrl: string) {
         ? ["http://localhost:8082", "http://127.0.0.1:8082"]
         : []),
     ],
-    plugins: [anonymous(), expo()],
+    plugins: [anonymous(), expo(), walletSignIn(env.DB)],
     advanced: { useSecureCookies: String(env.ENVIRONMENT) === "production" },
   });
 }

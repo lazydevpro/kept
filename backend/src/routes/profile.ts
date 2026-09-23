@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { ApiError, id } from "../lib/http";
+import { RESTRICTED_JURISDICTIONS, TERMS_VERSION } from "../lib/terms";
 import { parseJson, publicProfile } from "../lib/validation";
 import type { AppEnv, Variables } from "../types";
 
@@ -35,6 +36,11 @@ profileRoutes.get("/me", async (c) => {
   return c.json({
     profile: publicProfile(profile ?? {}),
     wallets: wallets.results,
+    terms: {
+      current: TERMS_VERSION,
+      accepted: Number(profile?.terms_version ?? 0) >= TERMS_VERSION,
+      restrictedJurisdictions: RESTRICTED_JURISDICTIONS,
+    },
   });
 });
 
@@ -50,19 +56,23 @@ profileRoutes.patch("/me", async (c) => {
   if (Object.keys(body).length === 0)
     throw new ApiError(422, "Choose something to update.");
   const userId = c.get("userId");
+  // COALESCE, so a field that was not sent keeps its value. This used to write
+  // the defaults for every omitted field — changing only the privacy mode reset
+  // the display name to "Member XXXX" and the timezone to UTC.
   await c.env.DB.prepare(
     `INSERT INTO profiles (user_id, display_name, privacy_mode, timezone)
-     VALUES (?, ?, ?, ?)
+     VALUES (?1, COALESCE(?2, ?5), COALESCE(?3, 'progress_only'), COALESCE(?4, 'UTC'))
      ON CONFLICT(user_id) DO UPDATE SET
-       display_name = excluded.display_name,
-       privacy_mode = excluded.privacy_mode,
-       timezone = excluded.timezone`,
+       display_name = COALESCE(?2, display_name),
+       privacy_mode = COALESCE(?3, privacy_mode),
+       timezone = COALESCE(?4, timezone)`,
   )
     .bind(
       userId,
-      body.displayName ?? `Member ${userId.slice(-4)}`,
-      body.privacyMode ?? "progress_only",
-      body.timezone ?? "UTC",
+      body.displayName ?? null,
+      body.privacyMode ?? null,
+      body.timezone ?? null,
+      `Member ${userId.slice(-4).toUpperCase()}`,
     )
     .run();
   const profile = await c.env.DB.prepare(
@@ -71,6 +81,28 @@ profileRoutes.patch("/me", async (c) => {
     .bind(userId)
     .first();
   return c.json({ profile: publicProfile(profile ?? {}) });
+});
+
+/**
+ * Agree to the terms and confirm eligibility. Asked once, before the first
+ * purchase, and again only if TERMS_VERSION rises. Both fields must be sent as
+ * `true` — the server records an explicit statement, never an absence of one.
+ */
+profileRoutes.post("/me/terms", async (c) => {
+  const body = await parseJson(
+    c,
+    z.object({
+      version: z.literal(TERMS_VERSION),
+      acceptTerms: z.literal(true),
+      notRestricted: z.literal(true),
+    }),
+  );
+  await c.env.DB.prepare(
+    "UPDATE profiles SET terms_version = ?, terms_accepted_at = CURRENT_TIMESTAMP WHERE user_id = ?",
+  )
+    .bind(body.version, c.get("userId"))
+    .run();
+  return c.json({ terms: { current: TERMS_VERSION, accepted: true } });
 });
 
 profileRoutes.post("/me/push-tokens", async (c) => {
@@ -88,4 +120,57 @@ profileRoutes.post("/me/push-tokens", async (c) => {
     .bind(id("push"), c.get("userId"), body.token, body.platform)
     .run();
   return c.json({ registered: true }, 201);
+});
+
+/**
+ * Delete the account and everything KEPT holds about it.
+ *
+ * Almost every table cascades from "user", but two references do not: a circle's
+ * owner and an invite's creator. Deleting the user row with those in place fails
+ * the foreign key, so they are settled first —
+ *
+ *   a circle with other members   passes to the longest-standing of them
+ *   a circle with nobody else     is deleted, with its feed
+ *   invites the user created      are deleted; the links stop working
+ *
+ * What is NOT deleted, because KEPT never held it: the wallet, the tokens in it,
+ * and the transactions on-chain. Those belong to the reader and stay where they
+ * are.
+ */
+profileRoutes.delete("/me", async (c) => {
+  const userId = c.get("userId");
+  const owned = await c.env.DB.prepare(
+    `SELECT c.id,
+       (SELECT cm.user_id FROM circle_members cm
+        WHERE cm.circle_id = c.id AND cm.user_id != ?1
+        ORDER BY cm.joined_at ASC LIMIT 1) AS heir
+     FROM circles c WHERE c.owner_user_id = ?1`,
+  )
+    .bind(userId)
+    .all<{ id: string; heir: string | null }>();
+
+  const statements: D1PreparedStatement[] = [];
+  for (const circle of owned.results) {
+    if (circle.heir) {
+      statements.push(
+        c.env.DB.prepare(
+          "UPDATE circles SET owner_user_id = ? WHERE id = ?",
+        ).bind(circle.heir, circle.id),
+        c.env.DB.prepare(
+          "UPDATE circle_members SET role = 'owner' WHERE circle_id = ? AND user_id = ?",
+        ).bind(circle.id, circle.heir),
+      );
+    } else {
+      statements.push(
+        c.env.DB.prepare("DELETE FROM circles WHERE id = ?").bind(circle.id),
+      );
+    }
+  }
+  statements.push(
+    c.env.DB.prepare("DELETE FROM invites WHERE created_by = ?").bind(userId),
+    c.env.DB.prepare('DELETE FROM "user" WHERE id = ?').bind(userId),
+  );
+  // One batch is one transaction: an account is either wholly gone or untouched.
+  await c.env.DB.batch(statements);
+  return c.body(null, 204);
 });

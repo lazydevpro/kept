@@ -21,9 +21,16 @@
     },
   ],
   "durable_objects": {
-    "bindings": [{ "name": "CIRCLE_ROOMS", "class_name": "CircleRoom" }],
+    "bindings": [
+      { "name": "CIRCLE_ROOMS", "class_name": "CircleRoom" },
+      { "name": "RATE_LIMITER", "class_name": "RateLimiter" }
+    ],
   },
-  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["CircleRoom"] }],
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["CircleRoom"] },
+    // src/rate-limiter.ts — exact counters, in place of the Rate Limiting binding.
+    { "tag": "v2", "new_sqlite_classes": ["RateLimiter"] },
+  ],
   "queues": {
     "producers": [{ "binding": "JOBS", "queue": "neon-reserve-jobs" }],
     "consumers": [
@@ -31,10 +38,16 @@
         "queue": "neon-reserve-jobs",
         "max_batch_size": 10,
         "max_batch_timeout": 5,
+        "max_retries": 10,
       },
     ],
   },
-  "triggers": { "crons": ["15 1 * * *"] },
+  // ONE schedule, on purpose. Every five minutes it re-queues verifications that
+  // have been pending too long; its 01:15 UTC tick also runs the nightly reminders
+  // and holdings backfill (`isNightlyTick` in src/index.ts). Workers Free allows
+  // five cron triggers per account across every worker, and a second schedule
+  // here costs one in each environment.
+  "triggers": { "crons": ["*/5 * * * *"] },
   "env": {
     "staging": {
       "name": "neon-reserve-api-staging",
@@ -49,11 +62,47 @@
       },
       "d1_databases": [{ "binding": "DB", "database_name": "neon-reserve-staging" }],
       "durable_objects": {
-        "bindings": [{ "name": "CIRCLE_ROOMS", "class_name": "CircleRoom" }]
+        "bindings": [
+          { "name": "CIRCLE_ROOMS", "class_name": "CircleRoom" },
+          { "name": "RATE_LIMITER", "class_name": "RateLimiter" }
+        ]
       },
       "queues": {
         "producers": [{ "binding": "JOBS", "queue": "neon-reserve-jobs-staging" }],
-        "consumers": [{ "queue": "neon-reserve-jobs-staging", "max_batch_size": 10, "max_batch_timeout": 5 }]
+        "consumers": [{ "queue": "neon-reserve-jobs-staging", "max_batch_size": 10, "max_batch_timeout": 5, "max_retries": 10 }]
+      }
+    },
+    // Mainnet. New resources, so they carry the product's name rather than the
+    // original `neon-reserve` identifiers (which stay on local and staging, where
+    // renaming would orphan a live database).
+    //
+    // Secrets, set with `npx wrangler secret put <NAME> --env production`:
+    //   BETTER_AUTH_SECRET  required
+    //   JUPITER_API_KEY     required to trade — without it buys and sells refuse
+    //   PRIVATE_RPC_URL     strongly recommended — the public RPC rate-limits
+    //                       the getTransaction calls verification depends on
+    //   EXPO_ACCESS_TOKEN   optional, for push
+    "production": {
+      "name": "kept-api",
+      "workers_dev": true,
+      "preview_urls": false,
+      "vars": {
+        "ENVIRONMENT": "production",
+        "APP_ORIGIN": "https://keptapp.pages.dev",
+        "PUBLIC_APP_URL": "https://keptapp.pages.dev",
+        "SOLANA_CLUSTER": "mainnet-beta",
+        "SOLANA_RPC_URL": "https://api.mainnet-beta.solana.com"
+      },
+      "d1_databases": [{ "binding": "DB", "database_name": "kept-production" }],
+      "durable_objects": {
+        "bindings": [
+          { "name": "CIRCLE_ROOMS", "class_name": "CircleRoom" },
+          { "name": "RATE_LIMITER", "class_name": "RateLimiter" }
+        ]
+      },
+      "queues": {
+        "producers": [{ "binding": "JOBS", "queue": "kept-jobs" }],
+        "consumers": [{ "queue": "kept-jobs", "max_batch_size": 10, "max_batch_timeout": 5, "max_retries": 10 }]
       }
     }
   }

@@ -15,6 +15,8 @@ import {
 import { ApiError, id } from "../lib/http";
 import { fetchQuotes } from "../lib/prices";
 import { positionFor } from "../lib/holdings";
+import { rpcUrl } from "../lib/solana";
+import { TERMS_VERSION } from "../lib/terms";
 import { fetchTokens } from "../lib/tokens";
 import { parseJson } from "../lib/validation";
 import type { AppEnv, Job, Variables } from "../types";
@@ -82,8 +84,13 @@ const FEATURED_RANK = new Map(
   FEATURED.map((symbol, index) => [symbol.toUpperCase(), index]),
 );
 const JUPITER_SWAP_URL = "https://api.jup.ag/swap/v2";
-/** Keyless, read-only. Pricing an amount must not depend on trading being configured. */
-const JUPITER_QUOTE_URL = "https://lite-api.jup.ag/swap/v1";
+/**
+ * Read-only pricing. Works keyless (0.5 req/s, shared by everyone) so an amount
+ * can be priced before trading is configured, and sends the key when there is
+ * one. This was `lite-api.jup.ag`, which Jupiter is retiring by cutting its rate
+ * limit until it is gone — same paths, same responses, new host.
+ */
+const JUPITER_QUOTE_URL = "https://api.jup.ag/swap/v1";
 const SOLANA_USDC = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
 /**
  * The amount anyone may put in, in USDC.
@@ -166,7 +173,7 @@ async function solanaRpc<T>(
   method: string,
   params: unknown[],
 ): Promise<T> {
-  const response = await fetch(env.SOLANA_RPC_URL, {
+  const response = await fetch(rpcUrl(env), {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
@@ -177,7 +184,7 @@ async function solanaRpc<T>(
     }),
   });
   if (!response.ok)
-    throw new ApiError(502, "Solana devnet is temporarily unavailable.");
+    throw new ApiError(502, "Solana is temporarily unavailable.");
   const payload = (await response.json()) as {
     result?: T;
     error?: { message: string };
@@ -185,7 +192,7 @@ async function solanaRpc<T>(
   if (payload.error || payload.result === undefined)
     throw new ApiError(
       502,
-      payload.error?.message ?? "Solana devnet did not return a result.",
+      payload.error?.message ?? "Solana did not return a result.",
     );
   return payload.result;
 }
@@ -224,11 +231,15 @@ interface TesseraToken {
 }
 
 /**
- * The two mints we shipped before the catalog was wired up.
+ * Tessera's catalogue as of 23 Sep 2026, for when its API is down.
  *
  * Kept as a floor, not as the source of truth: if Tessera is unreachable the
  * private lane degrades to these rather than emptying, which would read to
- * someone mid-purchase as the asset having been withdrawn.
+ * someone mid-purchase as the asset having been withdrawn. The API does fail —
+ * one call in five returned a 500 when this was checked — so the floor has to
+ * be the whole catalogue. With only the original two here, T-SpaceX read "not
+ * currently available" whenever Tessera hiccupped. Mints verified on-chain:
+ * Token-2022, 9 decimals, 20 bps transfer fee.
  */
 const TESSERA_FALLBACK: readonly TesseraToken[] = [
   {
@@ -244,6 +255,13 @@ const TESSERA_FALLBACK: readonly TesseraToken[] = [
     code: "tKalshi",
     sector: "Prediction Markets",
     mint: "TKLSidmLVt3cqGaaodG8tyRzoANfQwoh67AccjmubeZ",
+  },
+  {
+    id: "T-SpaceX",
+    name: "T-SpaceX",
+    code: "tSpaceX",
+    sector: "Aerospace",
+    mint: "TSPXcLV76s6V2zDiZQ18kBfcbnjaE2ZzNT3ga2Pd99v",
   },
 ];
 
@@ -603,6 +621,7 @@ tradeRoutes.get("/asset", async (c) => {
  * about slippage or route formatting.
  */
 async function priceRoute(
+  env: AppEnv,
   inputMint: string,
   outputMint: string,
   amount: string,
@@ -617,7 +636,10 @@ async function priceRoute(
 
   let payload: JupiterQuote;
   try {
-    const response = await fetch(url, { signal: AbortSignal.timeout(6000) });
+    const response = await fetch(url, {
+      headers: env.JUPITER_API_KEY ? { "x-api-key": env.JUPITER_API_KEY } : {},
+      signal: AbortSignal.timeout(6000),
+    });
     if (!response.ok) throw new Error(String(response.status));
     payload = (await response.json()) as JupiterQuote;
   } catch {
@@ -662,6 +684,7 @@ tradeRoutes.get("/quote", async (c) => {
     );
 
   const payload = await priceRoute(
+    c.env,
     SOLANA_USDC,
     outputMint,
     String(Math.round(amountUsdc * 1_000_000)),
@@ -726,6 +749,7 @@ tradeRoutes.get("/sell-quote", async (c) => {
     throw new ApiError(422, "That amount is too small to sell.", "dust");
 
   const payload = await priceRoute(
+    c.env,
     inputMint,
     SOLANA_USDC,
     baseUnits.toString(),
@@ -777,6 +801,19 @@ tradeRoutes.post("/order", async (c) => {
       422,
       "Acknowledge Tessera's private-market and eligibility risks before continuing.",
       "tessera_acknowledgement_required",
+    );
+  // Buying only. `/sell-order` deliberately has no such gate: whatever the
+  // terms say, nobody is ever stopped from getting their money back out.
+  const terms = await c.env.DB.prepare(
+    "SELECT terms_version FROM profiles WHERE user_id = ?",
+  )
+    .bind(c.get("userId"))
+    .first<{ terms_version: number | null }>();
+  if (Number(terms?.terms_version ?? 0) < TERMS_VERSION)
+    throw new ApiError(
+      403,
+      "Confirm you are eligible and accept the terms before your first purchase.",
+      "terms_required",
     );
   const amount = String(Math.round(body.amountUsdc * 1_000_000));
   if (String(c.env.SOLANA_CLUSTER) !== "mainnet-beta") {
