@@ -156,6 +156,80 @@ room — a reaction posted over HTTP arrives on the socket as `reaction.added`.
 - [x] Regression test drives the whole path — real invite, real goal and promise, then the
       rate limit, the self-nudge refusal and the award counters #verify
 
+## Now — launch, needs the owner #launch
+
+- [x] Production API live at `kept-api.lazydevpro.workers.dev` (23 Sep): mainnet, one `*/5`
+      schedule, all three secrets set. Verified end to end: sessions signed with the real secret,
+      writes land in `kept-production`, invites + CORS for the site, keyed Jupiter quote and
+      price, verification reading a real mainnet transaction through the private RPC in 8s,
+      account deletion, sign-in limit 20 then 429 #backend
+- [x] Site deployed with `/terms`, `/privacy`, `/join`; a real production invite renders on the
+      live join page, a bogus one says it expired #web
+- [ ] `npx eas login && npx eas init` in `mobile/` → `extra.eas.projectId`; unblocks builds and
+      push. Then `eas build -p android --profile production` (APK, mainnet, production API) #mobile
+- [ ] After the first EAS build: paste the signing cert's SHA-256 (`npx eas credentials -p android`)
+      into `web/public/.well-known/assetlinks.json` and redeploy the site, so invite links open
+      the app instead of the browser. `autoVerify` is already on #mobile #web
+- [ ] **Device pass with real money**: connect → sign in with wallet → buy $1 → verified → sell →
+      settled; plus reinstall → "I already use KEPT" → same account back. Nothing wallet-side has
+      run on a phone since 15 Sep #verify
+- [ ] **Legal review** of `/terms`, `/privacy` and `RESTRICTED_JURISDICTIONS`
+      (`backend/src/lib/terms.ts`, mirrored in `web/lib/terms.ts`, CI checks they agree) against
+      the issuers' own restrictions at assets.backed.fi/legal-documentation. Drafted from the
+      code, not by a lawyer #launch
+- [ ] Set `DOWNLOAD_URL` in `web/lib/site.ts` when the dApp Store listing is live — every
+      "Get early access" turns into a download link #web
+- [ ] Optional: crash reporting (Sentry needs an account/DSN). Render crashes now land on a
+      root `ErrorBoundary` instead of closing the app #mobile
+- [ ] Staging has ~130 empty anonymous accounts from the rate-limit burst tests (23 Sep). Harmless;
+      delete if tidiness matters #backend
+
+## Done — launch readiness (audit fixes, 23 Sep 2026) #launch
+
+- [x] **Wallet sign-in.** A challenge signed by a linked wallet signs this device into that
+      wallet's account (`backend/src/wallet-sign-in.ts`). Linking a wallet that already belongs
+      to another account offers to switch, reusing the same signature; onboarding has "I already
+      use KEPT". The empty account left behind is deleted. Session 7 days → 1 year #backend #mobile
+- [x] **Stuck purchases.** A cron every 5 minutes re-queues anything pending > 2 min; a signature
+      unseen after 10 min is rejected as never landed; `max_retries` 3 → 10; the verified
+      transition is a claim (`AND status = 'pending'`) so a re-queue cannot double-post to feeds;
+      the queue handler awaits instead of racing its own implicit ack #backend
+- [x] **Rate limits that limit.** Cloudflare's Rate Limiting binding was tried and on staging
+      never returned 429 (130+ sign-ins from one address). Replaced with a `RateLimiter` Durable
+      Object: sign-ins 20/min per address, Jupiter-backed routes 30/min per user. Verified live:
+      20 × 200 then 429 #backend
+- [x] **Ways out.** Account screen (header button, replacing the theme toggle): rename, unlink
+      wallet, leave circle, appearance, terms, privacy, sign out (only with a linked wallet),
+      delete account. Owners can remove members from the circle screen. Server: `DELETE /v1/me`
+      (hands owned circles on first), `DELETE /v1/wallets/:address`,
+      `DELETE /v1/circles/:id/members/:memberId` #backend #screens
+- [x] **Everyone was "Anonymous".** The auth plugin's placeholder name was copied into every
+      profile and nothing let anyone change it. Onboarding now asks, Account can edit, defaults
+      are "Member XXXX", migration 0011 renames existing ones #backend #screens
+- [x] **Terms gate.** Before a first purchase: not a U.S. person, not in a restricted
+      jurisdiction, accepts the terms. Enforced server-side (`terms_required`), versioned, never
+      on selling #backend #screens
+- [x] `/terms`, `/privacy`, `/join` (invite landing), OG/Twitter image, `metadataBase`, canonical
+      links, sitemap, `assetlinks.json`, "Get early access" in hero and footer; contact form
+      limited to 5 per address per 10 min (KV) — verified 5 × 200 then 429 #web
+- [x] `PATCH /v1/me` reset every field it was not sent — changing privacy reset the name #backend
+- [x] Share cards were a 500 on every request (`/:postId.svg` is one Hono parameter), said
+      "NEON RESERVE", and served any post kind. Fixed, rebranded, kept promises only #backend
+- [x] tSpaceX in the Tessera fallback; Jupiter off `lite-api.jup.ag` in backend and site #markets
+- [x] Production config: `env.production` (mainnet, `kept-api`), `deploy:staging` /
+      `deploy:production`, `eas.json` production → production API on mainnet (APK for the dApp
+      Store), MWA identity and invite links on `keptapp.pages.dev` #backend #mobile
+- [x] Staging redeployed with 0010 + 0011 applied; sell routes live there #backend
+- [x] Root `ErrorBoundary` in the app; CI for all three workspaces plus a terms-sync check #mobile
+- [x] **Cron budget.** Workers Free allows 5 cron triggers per account; two per environment
+      failed production's deploy. Now one schedule (`*/5`), with the nightly jobs on its 01:15 UTC
+      tick (`isNightlyTick`) #backend
+- [x] **Fail closed without a secret.** Production, deployed before its secret, issued sessions
+      signed with Better Auth's public default key (it only refuses when `NODE_ENV=production`,
+      which Workers never sets). Every route but `/` and `/health` now answers 503 until
+      `BETTER_AUTH_SECRET` is 32+ characters #backend #security
+- [x] Backend tests 16 → 31 #verify
+
 ## Now — blocked on hardware or accounts I do not have
 
 - [ ] Push is OFF in local builds: `extra.eas.projectId` is missing from app.json, so

@@ -1,0 +1,78 @@
+# The same gates each workspace runs locally, on every push and pull request.
+#
+# Nothing here deploys and nothing here needs a secret: the backend's tests run against
+# local Workers bindings, and the site's build is a static export. Deploys stay manual
+# (`npm run deploy:staging` / `deploy:production` in backend/, `npm run deploy` in web/)
+# because each one needs Cloudflare credentials this workflow should never hold.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  terms:
+    name: Terms in sync
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: node scripts/check-terms-sync.mjs
+
+  backend:
+    name: Backend — types, format, tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - run: npm run check
+      - run: npx wrangler deploy --dry-run --env production
+
+  mobile:
+    name: Mobile — typecheck, lint, format
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npm run lint:check
+      - run: npm run format:check
+
+  web:
+    name: Site — typecheck, lint, format, build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npm run check

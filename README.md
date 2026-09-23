@@ -10,11 +10,21 @@ KEPT is a private social investing habit app for Solana Mobile. People set a con
 ## Workspace
 
 - `mobile/` — Expo/React Native app, Mobile Wallet Adapter, SVG progress rings, and native Android home-screen widget.
-- `backend/` — Cloudflare Worker API using D1, Durable Objects, Queues, R2, Better Auth, and scheduled reminders.
+- `backend/` — Cloudflare Worker API using D1, Durable Objects, Queues, Better Auth, and scheduled jobs.
+- `web/` — the landing page, `/terms`, `/privacy` and the `/join` invite page, on Cloudflare Pages.
 - `docs/design/` — the KEPT design system, the source of truth for the interface.
 - `docs/private-markets.md` — Tessera and PreStocks compared, down to the mint extensions.
 
-The landing page is deployed at <https://keptapp.pages.dev>. The backend is not: no D1, queues or Durable Objects have been provisioned, and `backend/npm run deploy` is intentionally blocked.
+Where things run:
+
+| | |
+|---|---|
+| Site | <https://keptapp.pages.dev> — Cloudflare Pages, `cd web && npm run deploy` |
+| API, staging (devnet) | <https://neon-reserve-api-staging.lazydevpro.workers.dev> — `cd backend && npm run deploy:staging` |
+| API, production (mainnet) | `https://kept-api.lazydevpro.workers.dev` — `cd backend && npm run deploy:production` |
+| App builds | `mobile/eas.json`: `preview` → staging on devnet, `production` → production on mainnet |
+
+CI (`.github/workflows/ci.yml`) runs every workspace's gates on each push; deploys stay manual.
 
 ## Local start
 
