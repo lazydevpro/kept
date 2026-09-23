@@ -1,6 +1,6 @@
 'use client'
 
-import { useId, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import styles from './contact.module.css'
 
 /**
@@ -26,9 +26,22 @@ import styles from './contact.module.css'
 
 type Status = 'idle' | 'sending' | 'sent' | 'error'
 
+const OPEN_EVENT = 'kept:contact'
+
+/**
+ * Open the contact panel from anywhere on the page, optionally with a message already
+ * written — "Get early access" uses it so asking is one tap. An event rather than shared
+ * state because the panel is mounted once, at the root, and its callers are scattered
+ * through sections that have no other reason to know about each other.
+ */
+export function openContact(message?: string) {
+  window.dispatchEvent(new CustomEvent<{ message?: string }>(OPEN_EVENT, { detail: { message } }))
+}
+
 export function Contact() {
   const dialog = useRef<HTMLDialogElement>(null)
   const opener = useRef<HTMLButtonElement>(null)
+  const messageField = useRef<HTMLTextAreaElement>(null)
   const [status, setStatus] = useState<Status>('idle')
   const [error, setError] = useState<string | null>(null)
   const headingId = useId()
@@ -38,6 +51,21 @@ export function Contact() {
     setError(null)
     dialog.current?.showModal()
   }
+
+  useEffect(() => {
+    const onOpen = (event: Event) => {
+      const message = (event as CustomEvent<{ message?: string }>).detail?.message
+      setStatus('idle')
+      setError(null)
+      dialog.current?.showModal()
+      // After the panel renders its form (it may have been showing "Sent" last time).
+      requestAnimationFrame(() => {
+        if (message && messageField.current && !messageField.current.value) messageField.current.value = message
+      })
+    }
+    window.addEventListener(OPEN_EVENT, onOpen)
+    return () => window.removeEventListener(OPEN_EVENT, onOpen)
+  }, [])
 
   const close = () => {
     dialog.current?.close()
@@ -123,7 +151,7 @@ export function Contact() {
 
               <label className={styles.field}>
                 <span>Message</span>
-                <textarea name="message" required maxLength={2000} rows={4} />
+                <textarea name="message" required maxLength={2000} rows={4} ref={messageField} />
               </label>
 
               {/*

@@ -30,7 +30,12 @@
  * shows a spinner or an error to a first-time reader.
  */
 
-const JUPITER_PRICE_URL = 'https://lite-api.jup.ag/price/v3'
+/*
+ * Keyless, from the reader's browser, at Jupiter's keyless rate (0.5 req/s) — one page load
+ * makes one request, so that is plenty. This was `lite-api.jup.ag`, which Jupiter is
+ * retiring by cutting its limit until it is gone; keyless requests go to `api.jup.ag` now.
+ */
+const JUPITER_PRICE_URL = 'https://api.jup.ag/price/v3'
 
 /** Captured 2026-09-21. Also the resting state before the fetch lands. */
 export const CAPTURED_ON = '21 September 2026'

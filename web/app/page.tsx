@@ -8,7 +8,6 @@ import { Privacy } from '@/components/privacy'
 import { Circle } from '@/components/circle'
 import { Awards } from '@/components/awards'
 import { Widget } from '@/components/widget'
-import { Contact } from '@/components/contact'
 import { SiteFooter } from '@/components/site-footer'
 
 /**
@@ -40,7 +39,6 @@ export default function Home() {
         <Widget />
       </main>
       <SiteFooter />
-      <Contact />
     </>
   )
 }

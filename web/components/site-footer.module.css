@@ -98,3 +98,30 @@
   color: color-mix(in srgb, var(--ink-inverse) 12%, transparent);
   user-select: none;
 }
+
+/* Kiwi on ink: the one bright thing in the footer, because it is the one thing to do there. */
+.cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 3rem;
+  margin-top: var(--space-3);
+  padding-inline: var(--space-7);
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--kiwi);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: scale var(--motion-state) var(--ease-out);
+}
+
+.cta:hover {
+  scale: 1.03;
+}
+
+.cta:active {
+  scale: 0.97;
+}

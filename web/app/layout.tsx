@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from 'next'
 import { Sora, Inter, Instrument_Serif } from 'next/font/google'
+import { Contact } from '@/components/contact'
 import { SmoothScroll } from '@/components/smooth-scroll'
+import { SITE_URL } from '@/lib/site'
 import './globals.css'
 
 /*
@@ -29,9 +31,13 @@ const DESCRIPTION =
   'Invest a little every week, with people who notice. KEPT is a private social investing habit app for Solana Mobile — your circle sees the ring, not the number.'
 
 export const metadata: Metadata = {
+  // Resolves the share image and canonical links to absolute URLs. Without it every social
+  // preview referenced a relative path the crawler could not fetch.
+  metadataBase: new URL(SITE_URL),
   title: 'KEPT — Promises compound.',
   description: DESCRIPTION,
   applicationName: 'KEPT',
+  alternates: { canonical: '/' },
   openGraph: {
     title: 'KEPT — Promises compound.',
     description: DESCRIPTION,
@@ -55,6 +61,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </a>
         <SmoothScroll />
         {children}
+        {/* In the layout, not the home page: the invite and legal pages need a way to reach
+            us too, and "Get early access" opens it from wherever it is pressed. */}
+        <Contact />
       </body>
     </html>
   )

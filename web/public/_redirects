@@ -1,0 +1,3 @@
+# Every invite link is /join/<token>; one static page reads the token from the address bar.
+# A 200 is a rewrite, not a redirect — the address stays as the link that was shared.
+/join/*  /join  200

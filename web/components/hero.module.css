@@ -82,6 +82,11 @@
 .cta {
   background: var(--ink);
   color: var(--ink-inverse);
+  /* It is a <button> until there is a store link to point at. */
+  border: 0;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 .cta:hover {

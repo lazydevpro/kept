@@ -4,6 +4,7 @@ import { useRef } from 'react'
 import { useMotionScene } from '@/lib/motion'
 import { Rings, type RingsHandle } from '@/components/rings'
 import { Card, Chip, Object3D } from '@/components/ui'
+import { GetApp } from '@/components/get-app'
 import styles from './hero.module.css'
 
 /**
@@ -72,11 +73,11 @@ export function Hero() {
           </h1>
           <p className={`lede ${styles.reveal}`}>Invest a little every week, with people who notice.</p>
           <div className={`${styles.actions} ${styles.reveal}`}>
-            <a className={styles.cta} href="#manifesto">
+            {/* Getting the app leads; the source moved to the footer, where the people who
+                want it look for it. */}
+            <GetApp className={styles.cta} />
+            <a className={styles.ghost} href="#manifesto">
               See how it works
-            </a>
-            <a className={styles.ghost} href="https://github.com/lazydevpro/kept">
-              Read the source
             </a>
           </div>
         </div>

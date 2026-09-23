@@ -21,10 +21,29 @@
  * right behaviour for a preview deploy that has no channel to post into.
  */
 
+/** The slice of Workers KV this route uses. */
+interface CounterStore {
+  get(key: string): Promise<string | null>
+  put(key: string, value: string, options: { expirationTtl: number }): Promise<void>
+}
+
 /** The slice of the Pages Functions context this route uses. */
 interface Env {
   DISCORD_WEBHOOK_URL?: string
+  /** Per-address send counts. Bound in wrangler.jsonc; unbound, the limit is skipped. */
+  CONTACT_LIMITS?: CounterStore
 }
+
+/**
+ * Five messages per address, in a window that restarts with each one. Enough for anyone
+ * having a real conversation; a script is out of room after the fifth.
+ *
+ * KV is eventually consistent, so a burst fired in the same second from several locations
+ * can slip a few past — fine for keeping a Discord channel usable, which is the whole job.
+ * The honeypot and the length caps still run first.
+ */
+const SEND_LIMIT = 5
+const SEND_WINDOW_SECONDS = 10 * 60
 
 interface RouteContext {
   request: Request
@@ -85,6 +104,15 @@ export const onRequest = async ({ request, env }: RouteContext): Promise<Respons
 
   const webhook = env.DISCORD_WEBHOOK_URL
   if (!webhook) return fail('The contact form is not configured yet. Try the GitHub link instead.', 503)
+
+  if (env.CONTACT_LIMITS) {
+    const key = `contact:${request.headers.get('cf-connecting-ip') ?? 'unknown'}`
+    const sent = Number((await env.CONTACT_LIMITS.get(key)) ?? '0')
+    if (sent >= SEND_LIMIT) {
+      return fail('That is a lot of messages. Give it a few minutes and try again.', 429)
+    }
+    await env.CONTACT_LIMITS.put(key, String(sent + 1), { expirationTtl: SEND_WINDOW_SECONDS })
+  }
 
   const country = request.headers.get('cf-ipcountry') ?? 'unknown'
 
