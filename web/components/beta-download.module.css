@@ -1,0 +1,156 @@
+/* The beta notice. Same frame as the contact panel (contact.module.css), so the two read as one system. */
+
+.dialog {
+  margin: auto;
+  padding: 0;
+  width: min(32rem, calc(100vw - 2 * var(--gutter)));
+  max-height: calc(100dvh - 2 * var(--gutter));
+  border: 0;
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-lifted);
+}
+
+.dialog::backdrop {
+  background: rgb(11 15 10 / 45%);
+  backdrop-filter: blur(3px);
+}
+
+.panel {
+  padding: clamp(var(--space-6), 4vw, var(--space-8));
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.heading {
+  font-family: var(--font-sora), ui-sans-serif, system-ui, sans-serif;
+  font-size: var(--text-title-size);
+  line-height: var(--text-title-height);
+  letter-spacing: var(--text-title-tracking);
+  font-weight: 700;
+  margin-top: var(--space-1);
+}
+
+.close {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--ink-muted);
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.close:hover {
+  background: var(--surface-sunken);
+}
+
+/*
+ * Sun, not coral: coral is the colour of the people in your circle, and this is a caution, not
+ * a person. `--sun-deep` on `--sun-tint` clears AA for body text.
+ */
+.warning {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-5);
+  border-radius: var(--radius-md);
+  background: var(--sun-tint);
+  color: var(--ink);
+  font-size: var(--text-body-small-size);
+  line-height: var(--text-body-small-height);
+}
+
+.warning:focus {
+  outline: none;
+}
+
+.warningTitle {
+  font-weight: 700;
+  color: var(--sun-deep);
+}
+
+.needs {
+  display: grid;
+  gap: var(--space-2);
+  padding-left: var(--space-5);
+  font-size: var(--text-body-small-size);
+  line-height: var(--text-body-small-height);
+  color: var(--ink-muted);
+}
+
+.needs a,
+.small a {
+  color: var(--kiwi-deep);
+  text-underline-offset: 3px;
+}
+
+.actions {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.download,
+.later {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 3rem;
+  padding-inline: var(--space-5);
+  border-radius: var(--radius-pill);
+  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  font-size: var(--text-label-size);
+  font-weight: 700;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+  transition: scale var(--motion-state) var(--ease-out);
+}
+
+.download {
+  border: 0;
+  background: var(--kiwi);
+  color: var(--ink);
+}
+
+.later {
+  border: 1px solid var(--hairline-strong);
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.download:hover,
+.later:hover {
+  scale: 1.02;
+}
+
+.download:active,
+.later:active {
+  scale: 0.97;
+}
+
+.small {
+  font-size: var(--text-caption-size);
+  line-height: var(--text-caption-height);
+  color: var(--ink-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .download,
+  .later {
+    transition: none;
+  }
+}

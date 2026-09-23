@@ -12,11 +12,26 @@ export const API_URL = 'https://kept-api.lazydevpro.workers.dev'
 export const SOURCE_URL = 'https://github.com/lazydevpro/kept'
 
 /**
- * Where to get the app, once it can be got. Until the dApp Store listing is live this is
- * null, and every "get the app" call to action opens the contact form as an early-access
- * request instead of linking somewhere that does not exist yet.
+ * The Solana dApp Store listing, once there is one. While it is null, every "get the app"
+ * call to action offers the beta APK below instead — behind a notice that says what a beta
+ * on mainnet means. Setting this one constant turns them all into store links.
  */
-export const DOWNLOAD_URL: string | null = null
+export const DAPP_STORE_URL: string | null = null
+
+/**
+ * The current beta, straight from its GitHub release.
+ *
+ * The tag is spelled out rather than using `/releases/latest/`: GitHub's "latest" skips
+ * pre-releases, and the beta is one, so `latest` would 404. Bump all three together when a
+ * new APK is published (`mobile/npm run release:apk`, then `gh release create`).
+ */
+export const BETA = {
+  version: '1.0.0',
+  apkUrl: 'https://github.com/lazydevpro/kept/releases/download/v1.0.0/kept-1.0.0.apk',
+  releaseUrl: 'https://github.com/lazydevpro/kept/releases/tag/v1.0.0',
+  sizeMb: 81,
+  minAndroid: '7.0',
+} as const
 
 /** The app's custom scheme, for "Open in KEPT" on the invite page. */
 export const APP_SCHEME = 'neonreserve'

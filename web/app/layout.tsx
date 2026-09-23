@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { Sora, Inter, Instrument_Serif } from 'next/font/google'
+import { BetaDownload } from '@/components/beta-download'
 import { Contact } from '@/components/contact'
 import { SmoothScroll } from '@/components/smooth-scroll'
 import { SITE_URL } from '@/lib/site'
@@ -61,9 +62,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </a>
         <SmoothScroll />
         {children}
-        {/* In the layout, not the home page: the invite and legal pages need a way to reach
-            us too, and "Get early access" opens it from wherever it is pressed. */}
+        {/* In the layout, not the home page: the invite and legal pages need both too, and
+            every "get the app" button opens the beta notice from wherever it is pressed. */}
         <Contact />
+        <BetaDownload />
       </body>
     </html>
   )

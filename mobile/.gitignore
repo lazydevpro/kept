@@ -48,3 +48,6 @@ app-example
 .dev.vars*
 !.dev.vars.example
 !.env.example
+
+# EAS credentials upload file — carries keystore passwords. Created and deleted by hand; never commit.
+credentials.json

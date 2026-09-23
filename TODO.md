@@ -169,12 +169,11 @@ room — a reaction posted over HTTP arrives on the socket as `reaction.added`.
 - [x] Release APK 1.0.0 built locally (`npm run release:apk`), signed with a release key kept
       in `~/.kept/android/` — outside the repo. Its fingerprint is in `assetlinks.json`.
       Template permissions KEPT never uses (display over other apps, legacy storage) blocked #mobile
-- [ ] **Back up `~/.kept/android/`** (keystore + passwords). Lose it and no future release can
-      update an installed copy #mobile
-- [ ] Upload the key to EAS (`npx eas-cli credentials -p android`, production → upload) so cloud
-      builds sign with the same certificate #mobile
-- [ ] Redeploy the site so `assetlinks.json` carries the fingerprint — invite links only open
-      the app once it does #web
+- [x] `~/.kept/android/` (keystore + passwords) backed up by the owner #mobile
+- [x] Release key uploaded to EAS as the default production build credentials; EAS reports the
+      same SHA-256 (`C0:89:B1:E0:…:EA:59:10`) as the APK and `assetlinks.json` #mobile
+- [x] Site redeployed with the release fingerprint in `assetlinks.json`; Google's Digital Asset
+      Links check returns `linked: true` for the package and certificate #web
 - [ ] Push notifications need FCM: add `google-services.json` (Firebase project) and an
       `EXPO_ACCESS_TOKEN` secret on the Worker #notifications
 - [ ] **Device pass with real money**: connect → sign in with wallet → buy $1 → verified → sell →
@@ -184,8 +183,12 @@ room — a reaction posted over HTTP arrives on the socket as `reaction.added`.
       (`backend/src/lib/terms.ts`, mirrored in `web/lib/terms.ts`, CI checks they agree) against
       the issuers' own restrictions at assets.backed.fi/legal-documentation. Drafted from the
       code, not by a lawyer #launch
-- [ ] Set `DOWNLOAD_URL` in `web/lib/site.ts` when the dApp Store listing is live — every
-      "Get early access" turns into a download link #web
+- [x] Site offers the Android beta: every "get the app" button opens a notice (beta, real money
+      on mainnet, dApp Store coming) whose confirm button downloads the APK from the v1.0.0
+      GitHub release. Live and verified #web
+- [ ] When the dApp Store listing is live, set `DAPP_STORE_URL` in `web/lib/site.ts` — every
+      button becomes a store link. Each new beta: bump `BETA` there (version, URLs, size); the
+      tag is pinned because GitHub's `/releases/latest/` skips pre-releases #web
 - [ ] Optional: crash reporting (Sentry needs an account/DSN). Render crashes now land on a
       root `ErrorBoundary` instead of closing the app #mobile
 - [ ] Staging has ~130 empty anonymous accounts from the rate-limit burst tests (23 Sep). Harmless;
