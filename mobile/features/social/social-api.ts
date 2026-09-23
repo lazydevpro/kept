@@ -15,6 +15,8 @@ export interface CircleSummary {
   name: string
   description: string | null
   member_count: number
+  /** Your role in it. Present on the list, not on a single circle's detail. */
+  role?: 'owner' | 'member'
 }
 
 export interface CircleMember extends Profile {
@@ -30,10 +32,17 @@ export interface LinkedWallet {
   verified_at: string | null
 }
 
+/** Whether this account has agreed to the current terms. See `backend/src/lib/terms.ts`. */
+export interface TermsStatus {
+  current: number
+  accepted: boolean
+  restrictedJurisdictions: string[]
+}
+
 export function useMe() {
   return useQuery({
     queryKey: ['me'],
-    queryFn: () => apiRequest<{ profile: Profile; wallets: LinkedWallet[] }>('/v1/me'),
+    queryFn: () => apiRequest<{ profile: Profile; wallets: LinkedWallet[]; terms?: TermsStatus }>('/v1/me'),
     retry: 1,
   })
 }

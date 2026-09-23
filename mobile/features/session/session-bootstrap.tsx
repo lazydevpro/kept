@@ -30,7 +30,15 @@ export function SessionBootstrap({ children }: PropsWithChildren) {
   }, [signInPending])
 
   useEffect(() => {
-    if (isPending || session || attempted.current) return
+    // Re-armed whenever a session exists, so signing out or deleting the account
+    // is followed by a fresh anonymous one rather than the "couldn't start"
+    // screen. A failed attempt stays disarmed until "Try again", so an outage
+    // cannot turn this into a loop.
+    if (session) {
+      attempted.current = false
+      return
+    }
+    if (isPending || attempted.current) return
     attempted.current = true
     void signIn()
   }, [isPending, session, signIn])

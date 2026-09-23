@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router'
 import { useState } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { useMobileWallet } from '@wallet-ui/react-native-kit'
@@ -13,11 +14,16 @@ function truncate(value: string) {
 /**
  * One header for every tab: context above, title below, and exactly two controls. The
  * wallet collapses to a dot-and-glyph once connected so it stops competing with the title.
+ *
+ * The first control was the light/dark toggle. It is now the account — the only way to
+ * reach sign-out, unlinking, the terms and deleting everything — and the toggle lives
+ * inside it. Appearance is set once; the way out has to be findable from every tab.
  */
 export function AppHeader({ title, eyebrow }: { title: string; eyebrow?: string }) {
   const { account, connect } = useMobileWallet()
-  const { colors, mode, toggleTheme } = useAppTheme()
+  const { colors } = useAppTheme()
   const styles = useStyles()
+  const router = useRouter()
   const [connecting, setConnecting] = useState(false)
 
   const handleWallet = async () => {
@@ -42,12 +48,7 @@ export function AppHeader({ title, eyebrow }: { title: string; eyebrow?: string 
           {eyebrow ?? ''}
         </T>
         <View style={styles.actions}>
-          <IconButton
-            name={mode === 'dark' ? 'sun' : 'moon'}
-            label={`Use ${mode === 'dark' ? 'light' : 'dark'} mode`}
-            onPress={toggleTheme}
-            size={38}
-          />
+          <IconButton name="person" label="Account and settings" onPress={() => router.push('/settings')} size={38} />
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={account ? `Wallet connected: ${account.address}` : 'Connect Solana wallet'}

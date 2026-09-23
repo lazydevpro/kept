@@ -9,7 +9,7 @@ Neon Reserve is a private social investing habit app: set a weekly promise, inve
 - Neon Reserve dark theme with Inter and JetBrains Mono.
 - Solana Mobile Wallet Adapter connection on devnet.
 - Current xStocks asset metadata resolved by the backend and a Mobile Wallet Adapter signing flow for Jupiter Swap V2.
-- A deliberately small xStocks shelf and a separate Tessera private-markets lane for T-OpenAI and T-Kalshi, with the T-Token structure and transfer fee disclosed before a wallet handoff.
+- A deliberately small xStocks shelf and a separate Tessera private-markets lane for T-OpenAI, T-Kalshi and T-SpaceX, with the T-Token structure and transfer fee disclosed before a wallet handoff.
 - Anonymous Better Auth onboarding, profile privacy, persisted goals, weekly promises, and private circles.
 - Expiring deep-link invites with a join screen and native sharing.
 - Cryptographic wallet ownership verification before investments can be associated with a person.

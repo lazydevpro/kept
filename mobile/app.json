@@ -9,7 +9,7 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
-      "associatedDomains": ["applinks:neon-reserve-web.lazydevpro.workers.dev"]
+      "associatedDomains": ["applinks:keptapp.pages.dev", "applinks:neon-reserve-web.lazydevpro.workers.dev"]
     },
     "android": {
       "adaptiveIcon": {
@@ -23,8 +23,26 @@
       "intentFilters": [
         {
           "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "keptapp.pages.dev",
+              "pathPrefix": "/join"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        },
+        {
+          "action": "VIEW",
           "autoVerify": false,
-          "data": [{ "scheme": "https", "host": "neon-reserve-web.lazydevpro.workers.dev", "pathPrefix": "/join" }],
+          "data": [
+            {
+              "scheme": "https",
+              "host": "neon-reserve-web.lazydevpro.workers.dev",
+              "pathPrefix": "/join"
+            }
+          ],
           "category": ["BROWSABLE", "DEFAULT"]
         }
       ]
@@ -55,6 +73,13 @@
     "experiments": {
       "reactCompiler": true,
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "67f32a87-806d-4a40-9b29-656c6313e552"
+      }
+    },
+    "owner": "lazydevpro"
   }
 }

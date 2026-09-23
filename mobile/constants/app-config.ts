@@ -7,8 +7,19 @@ import {
 } from '@wallet-ui/react-native-kit'
 import { Platform } from 'react-native'
 
+/** The public site: invites land here, and it hosts the terms and privacy policy. */
+const SITE_URL = process.env.EXPO_PUBLIC_SITE_URL ?? 'https://keptapp.pages.dev'
+
 export class AppConfig {
-  static identity: AppIdentity = { name: 'KEPT', uri: 'https://neon-reserve-web.lazydevpro.workers.dev' }
+  static siteUrl = SITE_URL
+  /**
+   * What the wallet shows when it asks the reader to approve KEPT. It used to be the
+   * staging web build's workers.dev hostname — the first thing anyone saw when
+   * connecting a wallet. `icon` is resolved against `uri`.
+   */
+  static identity: AppIdentity = { name: 'KEPT', uri: SITE_URL, icon: 'icon.png' }
+  static termsUrl = `${SITE_URL}/terms`
+  static privacyUrl = `${SITE_URL}/privacy`
   static apiUrl = process.env.EXPO_PUBLIC_API_URL ?? (__DEV__ ? devApiUrl() : missingApiUrl())
   static networks: SolanaCluster[] =
     process.env.EXPO_PUBLIC_SOLANA_CLUSTER === 'mainnet-beta'

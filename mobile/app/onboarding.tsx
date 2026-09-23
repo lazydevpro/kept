@@ -13,19 +13,21 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   AccessibilityInfo,
   ActivityIndicator,
+  Alert,
   Animated,
   Easing,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
+  TextInput,
   useWindowDimensions,
   View,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { makeThemedStyles, useAppTheme } from '@/components/theme-provider'
 import { Button, Card, IconButton, Row, T, type Tone } from '@/components/ui'
-import { motion, radii, space, type ThemeColors } from '@/constants/theme'
+import { motion, radii, space, type, type ThemeColors } from '@/constants/theme'
 import { Icon, IconPlate, type IconName } from '@/design/icons'
 import { Object3D } from '@/design/objects'
 import { Rings } from '@/features/progress/rings'
@@ -40,6 +42,7 @@ import {
   syncOnboardingDraft,
 } from '@/features/onboarding/onboarding-state'
 import { enablePushNotifications } from '@/features/notifications/notification-bootstrap'
+import { useWalletLink } from '@/features/trade/use-wallet-link'
 
 const DAY_LETTERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
 const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
@@ -159,6 +162,21 @@ export default function OnboardingScreen() {
   }, [draft, ready])
 
   const update = (patch: Partial<OnboardingDraft>) => setDraft((current) => ({ ...current, ...patch }))
+
+  const walletLink = useWalletLink()
+  /** "I already use KEPT": back into the wallet's account, or on with setup if it has none. */
+  const restore = async () => {
+    const outcome = await walletLink.restoreWithWallet()
+    if (outcome === 'restored') {
+      router.replace('/(tabs)')
+    } else if (outcome === 'linked') {
+      Alert.alert(
+        'No account found for that wallet',
+        'It is now linked to this new one, so it will bring you back next time. Let’s set it up.',
+      )
+      goTo(1)
+    }
+  }
 
   const select = (patch: Partial<OnboardingDraft>, feedback: 'selection' | 'success' = 'selection') => {
     update(patch)
@@ -297,7 +315,9 @@ export default function OnboardingScreen() {
               },
             ]}
           >
-            {draft.step === 0 ? <Welcome onNext={() => goTo(1)} /> : null}
+            {draft.step === 0 ? (
+              <Welcome onNext={() => goTo(1)} onRestore={restore} restoring={walletLink.connecting} />
+            ) : null}
 
             {draft.step === 1 ? (
               <Reason
@@ -326,6 +346,7 @@ export default function OnboardingScreen() {
               <CircleStep
                 colors={colors}
                 draft={draft}
+                onName={(displayName) => update({ displayName })}
                 onSelect={(invite) => {
                   select({ inviteAfterSetup: invite })
                   setTimeout(() => goTo(LAST_STEP), 280)
@@ -353,7 +374,7 @@ export default function OnboardingScreen() {
 
 /* ── steps ────────────────────────────────────────────────── */
 
-function Welcome({ onNext }: { onNext: () => void }) {
+function Welcome({ onNext, onRestore, restoring }: { onNext: () => void; onRestore: () => void; restoring: boolean }) {
   const styles = useStyles()
   return (
     <View style={[styles.step, styles.stepFill]}>
@@ -365,6 +386,15 @@ function Welcome({ onNext }: { onNext: () => void }) {
       </T>
       <View style={styles.grow} />
       <Button label="Get started" icon="arrowRight" onPress={onNext} style={styles.cta} />
+      {/* The way back after a reinstall or a new phone. Without it, the only
+          path from this screen was a brand-new, empty account. */}
+      <Button
+        label={restoring ? 'Opening wallet…' : 'I already use KEPT'}
+        icon="wallet"
+        variant="ghost"
+        disabled={restoring}
+        onPress={onRestore}
+      />
     </View>
   )
 }
@@ -555,10 +585,12 @@ function CircleStep({
   colors,
   draft,
   onSelect,
+  onName,
 }: {
   colors: ThemeColors
   draft: OnboardingDraft
   onSelect: (invite: boolean) => void
+  onName: (name: string) => void
 }) {
   const styles = useStyles()
   const options: { invite: boolean; icon: IconName; title: string; detail: string }[] = [
@@ -570,6 +602,20 @@ function CircleStep({
       <T role="title" center>
         Better with someone.
       </T>
+      {/* Without this every account was called "Anonymous" — a circle of four people all
+          named the same, and nudges from "Anonymous". Optional: skipped, it is "Member" and
+          four characters, and it can be changed in Account. */}
+      <TextInput
+        value={draft.displayName}
+        onChangeText={(value) => onName(value.slice(0, 40))}
+        placeholder="What should friends call you?"
+        placeholderTextColor={colors.inkMuted}
+        autoCapitalize="words"
+        autoComplete="name"
+        maxLength={40}
+        accessibilityLabel="Your name, as your circle sees it"
+        style={[type.body, styles.nameField, { color: colors.ink, backgroundColor: colors.surface }]}
+      />
       <View style={styles.optionList} accessibilityRole="radiogroup">
         {options.map((option) => {
           const selected = draft.inviteAfterSetup === option.invite
@@ -712,6 +758,13 @@ const useStyles = makeThemedStyles((colors) =>
 
     page: { flex: 1 },
     step: { gap: space[4], alignItems: 'stretch' },
+    nameField: {
+      minHeight: 52,
+      paddingHorizontal: space[4],
+      borderRadius: radii.lg,
+      borderWidth: 1,
+      borderColor: colors.hairline,
+    },
     stepFill: { flex: 1 },
     grow: { flex: 1, minHeight: space[4] },
     cta: { alignSelf: 'stretch', marginTop: space[1] },

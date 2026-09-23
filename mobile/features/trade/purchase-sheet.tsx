@@ -25,7 +25,10 @@ import { Button, Chip, Row, Sheet, T } from '@/components/ui'
 import { radii, space, type } from '@/constants/theme'
 import { makeThemedStyles, useAppTheme } from '@/components/theme-provider'
 import { Icon } from '@/design/icons'
-import { useGoals } from '@/features/social/social-api'
+import * as WebBrowser from 'expo-web-browser'
+import { AppConfig } from '@/constants/app-config'
+import { useAcceptTerms } from '@/features/account/account-api'
+import { useGoals, useMe } from '@/features/social/social-api'
 import { useNetwork } from '@/features/network/use-network'
 import { AssetLogo } from './asset-logo'
 import {
@@ -59,6 +62,10 @@ const compact = (value: number) =>
 
 const pct = (value: number) => `${value >= 0 ? '+' : '−'}${Math.abs(value).toFixed(2)}%`
 
+/** ["a", "b", "c"] → "a, b or c". The list comes from the server, so it cannot drift from the terms. */
+const listOf = (items: string[]) =>
+  items.length <= 1 ? (items[0] ?? '') : `${items.slice(0, -1).join(', ')} or ${items[items.length - 1]}`
+
 export function PurchaseSheet({ asset, onClose }: { asset: InvestableAsset | null; onClose: () => void }) {
   const { colors } = useAppTheme()
   const styles = useStyles()
@@ -73,6 +80,18 @@ export function PurchaseSheet({ asset, onClose }: { asset: InvestableAsset | nul
   const [trading, setTrading] = useState(false)
   const [order, setOrder] = useState<TradeOrder | null>(null)
   const [acknowledged, setAcknowledged] = useState(false)
+
+  /*
+   * Once per account, before the first purchase: the issuers restrict who may
+   * hold these tokens, so the reader confirms they are not one of those people
+   * and accepts the terms. The server refuses an order until they have
+   * (`terms_required`); selling is never gated.
+   */
+  const me = useMe()
+  const acceptTerms = useAcceptTerms()
+  const terms = me.data?.terms
+  const termsNeeded = Boolean(linked && terms && !terms.accepted)
+  const [eligible, setEligible] = useState(false)
 
   const detail = useAssetDetail(asset?.mint ?? null).data?.asset ?? null
   const isTessera = (detail?.provider ?? asset?.provider) === 'tessera'
@@ -121,8 +140,10 @@ export function PurchaseSheet({ asset, onClose }: { asset: InvestableAsset | nul
 
   const prepare = async () => {
     if (!asset || !account || !amountValid) return
+    if (termsNeeded && (!eligible || !terms)) return
     setTrading(true)
     try {
+      if (termsNeeded && terms) await acceptTerms.mutateAsync(terms.current)
       const prepared = await requestTradeOrder({
         outputMint: asset.mint,
         outputSymbol: asset.symbol,
@@ -180,6 +201,7 @@ export function PurchaseSheet({ asset, onClose }: { asset: InvestableAsset | nul
     if (trading) return order ? 'Opening wallet…' : 'Preparing…'
     if (!linked) return connecting ? 'Connecting…' : account ? 'Sign to verify wallet' : 'Connect wallet'
     if (!amountValid) return `Enter $${MIN_USDC}–$${MAX_USDC.toLocaleString('en-US')}`
+    if (termsNeeded && !eligible) return 'Confirm eligibility to continue'
     if (isTessera && !acknowledged) return 'Acknowledge the risk to continue'
     if (!order) return `Buy ${money(amount)} of ${asset?.symbol ?? ''}`
     return order.mode === 'sandbox' ? 'Sign devnet rehearsal' : 'Approve in wallet'
@@ -200,6 +222,35 @@ export function PurchaseSheet({ asset, onClose }: { asset: InvestableAsset | nul
             {/* The acknowledgement rides with the body's action, not the body: it
               gates the action, and scrolled out of sight it left the button
               asking for something the reader could not see. */}
+            {termsNeeded && terms ? (
+              <View style={[styles.ack, styles.ackStack, eligible && styles.ackOn]}>
+                <Pressable
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: eligible }}
+                  onPress={() => setEligible((value) => !value)}
+                  style={styles.ackPress}
+                >
+                  <Icon
+                    name={eligible ? 'checkCircle' : 'dot'}
+                    size={22}
+                    color={eligible ? colors.kiwiDeep : colors.inkFaint}
+                  />
+                  <T role="caption" style={styles.ackText}>
+                    I am not a U.S. person, I do not live in {listOf(terms.restrictedJurisdictions)}, and I accept the
+                    Terms of use.
+                  </T>
+                </Pressable>
+                <Pressable
+                  accessibilityRole="link"
+                  onPress={() => void WebBrowser.openBrowserAsync(AppConfig.termsUrl)}
+                  hitSlop={8}
+                >
+                  <T role="caption" color={colors.kiwiDeep}>
+                    Read the terms
+                  </T>
+                </Pressable>
+              </View>
+            ) : null}
             {isTessera ? (
               <Pressable
                 accessibilityRole="checkbox"
@@ -221,7 +272,10 @@ export function PurchaseSheet({ asset, onClose }: { asset: InvestableAsset | nul
               label={actionLabel()}
               onPress={linked ? (order ? confirm : prepare) : linkWallet}
               disabled={
-                connecting || trading || (linked && (!amountValid || !asset?.available || (isTessera && !acknowledged)))
+                connecting ||
+                trading ||
+                (linked &&
+                  (!amountValid || !asset?.available || (termsNeeded && !eligible) || (isTessera && !acknowledged)))
               }
             />
             <T role="caption" center color={colors.inkFaint}>
@@ -445,5 +499,8 @@ const useStyles = makeThemedStyles((colors) =>
     },
     ackOn: { backgroundColor: colors.kiwiTint },
     ackText: { flex: 1 },
+    /** The eligibility box: the checkbox row, and the terms link under it. */
+    ackStack: { flexDirection: 'column', alignItems: 'flex-start', gap: space[2] },
+    ackPress: { flexDirection: 'row', alignItems: 'center', gap: space[3], alignSelf: 'stretch' },
   }),
 )

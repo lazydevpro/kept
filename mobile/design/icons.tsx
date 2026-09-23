@@ -52,6 +52,42 @@ const glyphs = {
     </>
   ),
 
+  person: ({ c, w }) => (
+    <>
+      <Circle cx={12} cy={8} r={3.8} stroke={c} strokeWidth={w} fill="none" />
+      <Path
+        d="M4.5 20.2v-.7a5.6 5.6 0 0 1 5.6-5.6h3.8a5.6 5.6 0 0 1 5.6 5.6v.7"
+        stroke={c}
+        strokeWidth={w}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+    </>
+  ),
+
+  logOut: ({ c, w }) => (
+    <>
+      <Path
+        d="M14 4.5H7.2a2.2 2.2 0 0 0-2.2 2.2v10.6a2.2 2.2 0 0 0 2.2 2.2H14"
+        stroke={c}
+        strokeWidth={w}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+      <Path d="M10.5 12H20" stroke={c} strokeWidth={w} strokeLinecap="round" fill="none" />
+      <Path
+        d="M16.8 8.6 20.2 12l-3.4 3.4"
+        stroke={c}
+        strokeWidth={w}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+    </>
+  ),
+
   flag: ({ c, w }) => (
     <>
       <Path d="M5.5 21V3.8" stroke={c} strokeWidth={w} strokeLinecap="round" fill="none" />

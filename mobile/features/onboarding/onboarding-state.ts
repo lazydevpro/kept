@@ -19,6 +19,8 @@ export type OnboardingDraft = {
   previewCompleted: boolean
   privacyMode: PrivacyChoice
   inviteAfterSetup: boolean | null
+  /** What the circle calls you. Optional — the server falls back to "Member" and four characters. */
+  displayName: string
   reminderChoice: 'enabled' | 'skipped' | 'unavailable' | null
 }
 
@@ -34,6 +36,7 @@ export const defaultOnboardingDraft: OnboardingDraft = {
   previewCompleted: false,
   privacyMode: 'progress_only',
   inviteAfterSetup: null,
+  displayName: '',
   reminderChoice: null,
 }
 
@@ -57,6 +60,16 @@ export async function isOnboardingComplete() {
   return (await AsyncStorage.getItem(COMPLETE_KEY)) === 'true'
 }
 
+/** Onboarding describes an account. When the account goes, so does it. */
+export async function resetOnboarding() {
+  await AsyncStorage.multiRemove([DRAFT_KEY, COMPLETE_KEY])
+}
+
+/** A restored account already has its goal and circle; there is nothing to set up. */
+export async function markOnboardingComplete() {
+  await AsyncStorage.setItem(COMPLETE_KEY, 'true')
+}
+
 export async function completeOnboarding(draft: OnboardingDraft) {
   await Promise.all([
     AsyncStorage.setItem(COMPLETE_KEY, 'true'),
@@ -65,9 +78,13 @@ export async function completeOnboarding(draft: OnboardingDraft) {
 }
 
 export async function syncOnboardingDraft(draft: OnboardingDraft) {
+  const displayName = draft.displayName.trim()
   await apiRequest('/v1/me', {
     method: 'PATCH',
-    body: JSON.stringify({ privacyMode: draft.privacyMode }),
+    body: JSON.stringify({
+      privacyMode: draft.privacyMode,
+      ...(displayName.length >= 2 ? { displayName } : {}),
+    }),
   })
 
   const goal = await apiRequest<{ id: string }>('/v1/goals', {

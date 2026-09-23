@@ -8,6 +8,8 @@ import { IconPlate } from '@/design/icons'
 import { Illustration } from '@/design/illustrations'
 import { RingGlyph } from '@/features/progress/rings'
 import { useNudge } from '@/features/awards/awards-api'
+import { useRemoveFromCircle } from '@/features/account/account-api'
+import { confirmAsync } from '@/lib/confirm'
 import {
   readReactions,
   useCircle,
@@ -53,6 +55,7 @@ export default function CircleScreen() {
   const shareInvite = useShareInvite(circleId)
   const toggleReaction = useToggleReaction(circleId)
   const nudge = useNudge(circleId)
+  const remove = useRemoveFromCircle(circleId)
 
   const [naming, setNaming] = useState(false)
   const [name, setName] = useState('')
@@ -61,6 +64,7 @@ export default function CircleScreen() {
   const members = circle.data?.members ?? []
   const showedUp = members.filter((member) => member.showedUp).length
   const circleProgress = members.length ? showedUp / members.length : 0
+  const iOwn = members.some((member) => member.id === myId && member.role === 'owner')
   const posts = (feed.data?.posts ?? []).slice(0, FEED_LIMIT)
 
   const nameValid = name.trim().length >= 2 && name.trim().length <= 48
@@ -95,6 +99,19 @@ export default function CircleScreen() {
       // "Already nudged this week" is a rule, not a failure — say so plainly.
       Alert.alert('Not sent', error instanceof Error ? error.message : 'Please try again.')
     }
+  }
+
+  const removeMember = async (memberId: string, displayName: string) => {
+    const ok = await confirmAsync({
+      title: `Remove ${displayName}?`,
+      message: 'They leave the circle and their posts go with them. They can come back with a new invite.',
+      confirmLabel: 'Remove',
+      destructive: true,
+    })
+    if (!ok) return
+    remove.mutate(memberId, {
+      onError: (error) => Alert.alert('Not removed', error instanceof Error ? error.message : 'Please try again.'),
+    })
   }
 
   const nameSheet = (
@@ -229,6 +246,17 @@ export default function CircleScreen() {
                       on="card"
                       disabled={nudge.isPending}
                       onPress={() => sendNudge(member.id, member.displayName)}
+                    />
+                  ) : null}
+                  {/* Only the owner can remove someone, and never themselves from
+                      here — leaving lives in Account, next to the other exits. */}
+                  {iOwn && !isYou ? (
+                    <IconButton
+                      name="close"
+                      label={`Remove ${member.displayName} from the circle`}
+                      on="card"
+                      disabled={remove.isPending}
+                      onPress={() => void removeMember(member.id, member.displayName)}
                     />
                   ) : null}
                   <RingGlyph
