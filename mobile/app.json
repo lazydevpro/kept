@@ -2,7 +2,7 @@
   "expo": {
     "name": "KEPT",
     "slug": "neon-reserve",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "neonreserve",
@@ -50,7 +50,8 @@
         "android.permission.SYSTEM_ALERT_WINDOW",
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.WRITE_EXTERNAL_STORAGE"
-      ]
+      ],
+      "versionCode": 2
     },
     "web": {
       "output": "static",
