@@ -8,7 +8,7 @@
 | | |
 |---|---|
 | Landing page | <https://keptapp.pages.dev> |
-| Try it | [Download the Android beta (APK, 81 MB)](https://github.com/lazydevpro/kept/releases/download/v1.0.0/kept-1.0.0.apk) · [release notes](https://github.com/lazydevpro/kept/releases/tag/v1.0.0) |
+| Try it | [Download the Android beta (APK, 81 MB)](https://github.com/lazydevpro/kept/releases/download/v1.0.1/kept-1.0.1.apk) · [release notes](https://github.com/lazydevpro/kept/releases/tag/v1.0.1) |
 | Status | Public beta — coming to the Solana dApp Store |
 | Platform | Android, built for Solana Mobile and the Seeker |
 | Chain | Solana mainnet |
@@ -33,7 +33,7 @@ holding or a dollar figure unless you decide they should.
 
 KEPT is in public beta on Android, and it's live on Solana mainnet.
 
-**[Download the beta (APK, 81 MB)](https://github.com/lazydevpro/kept/releases/download/v1.0.0/kept-1.0.0.apk)**
+**[Download the beta (APK, 81 MB)](https://github.com/lazydevpro/kept/releases/download/v1.0.1/kept-1.0.1.apk)**
 — or open [keptapp.pages.dev](https://keptapp.pages.dev) on your phone and tap *Get the Android beta*.
 
 1. Open the download on an Android phone — a Solana Seeker, or any phone on Android 7.0 or
