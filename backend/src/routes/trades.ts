@@ -635,7 +635,10 @@ type ChartRange = keyof typeof CHART_RANGES;
 type JupiterCandle = { time?: number; close?: number };
 
 const CHART_TTL_MS = 60 * 1000;
-const chartCache = new Map<string, { at: number; points: { t: number; p: number }[] }>();
+const chartCache = new Map<
+  string,
+  { at: number; points: { t: number; p: number }[] }
+>();
 
 tradeRoutes.get("/chart", async (c) => {
   const mint = (c.req.query("mint") ?? "").trim();
@@ -649,14 +652,17 @@ tradeRoutes.get("/chart", async (c) => {
 
   const key = `${mint}:${range}`;
   const cached = chartCache.get(key);
-  let points = cached && Date.now() - cached.at < CHART_TTL_MS ? cached.points : null;
+  let points =
+    cached && Date.now() - cached.at < CHART_TTL_MS ? cached.points : null;
 
   if (!points) {
-    const url = `${JUPITER_CHART_URL}/${encodeURIComponent(mint)}?${new URLSearchParams({
-      interval,
-      to: String(Date.now()),
-      candles: String(candles),
-    }).toString()}`;
+    const url = `${JUPITER_CHART_URL}/${encodeURIComponent(mint)}?${new URLSearchParams(
+      {
+        interval,
+        to: String(Date.now()),
+        candles: String(candles),
+      },
+    ).toString()}`;
     try {
       const response = await fetch(url, { signal: AbortSignal.timeout(6000) });
       if (!response.ok) throw new Error(String(response.status));
@@ -688,7 +694,10 @@ tradeRoutes.get("/chart", async (c) => {
       points,
       first,
       last,
-      changePct: first !== null && last !== null && first !== 0 ? ((last - first) / first) * 100 : null,
+      changePct:
+        first !== null && last !== null && first !== 0
+          ? ((last - first) / first) * 100
+          : null,
     },
   });
 });
