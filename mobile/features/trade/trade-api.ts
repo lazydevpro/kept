@@ -80,6 +80,36 @@ export function useAssetDetail(mint: string | null) {
   })
 }
 
+export const CHART_RANGES = ['1D', '1W', '1M', '1Y'] as const
+export type ChartRange = (typeof CHART_RANGES)[number]
+
+export type PriceChart = {
+  mint: string
+  range: ChartRange
+  /** Closes only — this is a line, not a candlestick. */
+  points: { t: number; p: number }[]
+  first: number | null
+  last: number | null
+  changePct: number | null
+}
+
+/**
+ * Price history for the buy ticket.
+ *
+ * An empty `points` array is a real answer, not a failure: plenty of the 900-odd
+ * listed assets are thin enough that Jupiter holds no history for them.
+ */
+export function usePriceChart(mint: string | null, range: ChartRange) {
+  return useQuery({
+    queryKey: ['price-chart', mint, range],
+    queryFn: () =>
+      apiRequest<{ chart: PriceChart }>(`/v1/trades/chart?mint=${encodeURIComponent(mint!)}&range=${range}`),
+    enabled: Boolean(mint),
+    staleTime: 60_000,
+    retry: 1,
+  })
+}
+
 /** What a given amount actually buys, before any wallet is involved. */
 export interface QuotePreview {
   amountUsdc: number

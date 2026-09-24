@@ -215,12 +215,22 @@ export function useShareInvite(circleId?: string) {
           body: JSON.stringify({ expiresInHours: 72, maxUses: 5 }),
         },
       )
-      // The one piece of copy that leaves the app and lands in someone else's
-      // messages — it was still offering to share a "Neon Reserve" circle long
-      // after the rename.
+      // The one piece of copy that leaves the app and lands in someone else's messages, so
+      // it gets the most care: what it is, what it costs them, what stays private, then the
+      // link on its own line where every messaging app will make it tappable.
+      //
+      // Only the https link is sent. It is an Android App Link, so on a phone that has KEPT
+      // it opens the join screen directly, and on one that does not it opens the web page
+      // rather than failing silently the way a bare `neonreserve://` link would.
       await Share.share({
-        title: 'Join my KEPT circle',
-        message: `Join my private KEPT circle. We share progress — never balances. ${result.invite.webUrl}`,
+        title: 'Join my circle on KEPT',
+        message: [
+          'Join my circle on KEPT.',
+          '',
+          'We each invest a little every week and keep each other to it. Your circle sees that you showed up — never how much.',
+          '',
+          result.invite.webUrl,
+        ].join('\n'),
         url: result.invite.webUrl,
       })
       return result.invite

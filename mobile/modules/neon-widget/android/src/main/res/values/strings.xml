@@ -1,4 +1,8 @@
 <resources>
+  <!-- What the launcher's widget picker lists this under. The receiver used to carry a
+       hardcoded "Neon Reserve", which outlived the rename because nothing in the app's own
+       UI ever renders it. -->
+  <string name="kept_widget_label">KEPT</string>
   <string name="neon_widget_description">Private progress rings for your weekly investing habit</string>
   <string name="kept_widget_eyebrow">KEPT</string>
   <string name="kept_widget_rings_description">Your promise, goal and circle rings</string>

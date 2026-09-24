@@ -7,13 +7,12 @@
  * background colours.
  */
 
-import { ComponentProps, PropsWithChildren, ReactNode, useRef } from 'react'
+import { ComponentProps, PropsWithChildren, ReactNode, useEffect, useRef, useState } from 'react'
 import {
-  KeyboardAvoidingView,
+  Keyboard,
   Modal,
   NativeScrollEvent,
   NativeSyntheticEvent,
-  Platform,
   Pressable,
   ScrollView,
   StyleProp,
@@ -24,7 +23,7 @@ import {
   View,
   ViewStyle,
 } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { elevation, motion, radii, space, type } from '@/constants/theme'
 import { makeThemedStyles, useAppTheme } from '@/components/theme-provider'
 import { Icon, type IconName } from '@/design/icons'
@@ -283,7 +282,7 @@ export function IconButton({
    * inside a white card, where a white button would be invisible.
    */
   on = 'background',
-  disabled,
+  disabled = false,
 }: {
   name: IconName
   onPress: () => void
@@ -301,6 +300,7 @@ export function IconButton({
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={label}
+      accessibilityState={{ disabled }}
       disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => [
@@ -466,15 +466,34 @@ export function Sheet({
   const styles = useStyles()
   const { colors } = useAppTheme()
   const { height } = useWindowDimensions()
+  // The app draws edge to edge, so the sheet runs under the navigation bar. The bottom
+  // spacing below was drawn for a phone without one; adding the inset keeps that gap
+  // where the design put it instead of letting the bar slice the last control off.
+  const insets = useSafeAreaInsets()
+  const keyboardHeight = useKeyboardHeight()
+  // While the keyboard is up it covers the navigation bar, so the inset would be spacing
+  // against something nobody can see. Counting it only when the keyboard is down is what
+  // lets the sheet sit flush again afterwards.
+  const bottomInset = keyboardHeight > 0 ? 0 : insets.bottom
 
   return (
     <Modal animationType="slide" transparent visible={visible} onRequestClose={onClose}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.sheetFill}>
+      {/* A Modal gets its own window, which does not inherit the activity's adjustResize,
+          so the keyboard used to sit on top of the sheet's own field and button.
+          KeyboardAvoidingView does not reset its padding reliably here — it left the sheet
+          hanging above the bottom of the screen once the keyboard closed — so the lift is
+          driven straight off the keyboard height, which returns to zero on dismiss. */}
+      <View style={styles.sheetFill}>
         <Pressable accessibilityLabel="Dismiss" style={styles.scrim} onPress={onClose} />
         {/* Capped and scrollable: the buy ticket is much taller than the
             confirmations this started out holding, and on a short screen with
             the keyboard up it would otherwise run off the bottom. */}
-        <View style={[styles.sheet, { maxHeight: height * 0.9 }]}>
+        <View
+          style={[
+            styles.sheet,
+            { maxHeight: Math.min(height * 0.9, height - keyboardHeight), marginBottom: keyboardHeight },
+          ]}
+        >
           <View style={styles.grabber} />
           <View style={styles.sheetHeader}>
             {leading}
@@ -492,15 +511,37 @@ export function Sheet({
             bounces={false}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.sheetBody}
+            contentContainerStyle={[styles.sheetBody, footer ? null : { paddingBottom: space[5] + bottomInset }]}
           >
             {children}
           </ScrollView>
-          {footer ? <View style={styles.sheetFooter}>{footer}</View> : null}
+          {footer ? (
+            <View style={[styles.sheetFooter, { paddingBottom: space[8] + bottomInset }]}>{footer}</View>
+          ) : null}
         </View>
-      </KeyboardAvoidingView>
+      </View>
     </Modal>
   )
+}
+
+/**
+ * The on-screen keyboard's height, or 0 while it is down. Android reports the show event
+ * without resizing a Modal's window, so anything anchored to the bottom of a sheet has to
+ * move itself.
+ */
+function useKeyboardHeight() {
+  const [keyboardHeight, setKeyboardHeight] = useState(0)
+
+  useEffect(() => {
+    const shown = Keyboard.addListener('keyboardDidShow', (event) => setKeyboardHeight(event.endCoordinates.height))
+    const hidden = Keyboard.addListener('keyboardDidHide', () => setKeyboardHeight(0))
+    return () => {
+      shown.remove()
+      hidden.remove()
+    }
+  }, [])
+
+  return keyboardHeight
 }
 
 const useStyles = makeThemedStyles((colors) =>

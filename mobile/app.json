@@ -62,8 +62,8 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 220,
+          "image": "./assets/images/splash-blank.png",
+          "imageWidth": 64,
           "resizeMode": "contain",
           "backgroundColor": "#FBFBF4",
           "dark": {
@@ -73,7 +73,8 @@
       ],
       "expo-web-browser",
       "expo-secure-store",
-      "expo-notifications"
+      "expo-notifications",
+      "expo-sharing"
     ],
     "experiments": {
       "reactCompiler": true,

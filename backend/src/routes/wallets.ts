@@ -48,7 +48,11 @@ walletRoutes.post("/verify", async (c) => {
     c,
     z.object({
       challengeId: z.string().min(8),
-      signature: z.string().min(40).max(256),
+      // Mobile Wallet Adapter hands back the SIGNED PAYLOAD — the challenge message with
+      // the 64-byte signature appended — not a bare signature. That is ~376 base64
+      // characters for our message, so a 256 cap rejected every real wallet before the
+      // verification below ever ran, and the handler's own slice(-64) was unreachable.
+      signature: z.string().min(40).max(2048),
     }),
   );
   const challenge = await c.env.DB.prepare(

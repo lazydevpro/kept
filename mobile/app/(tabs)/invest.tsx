@@ -8,7 +8,7 @@ import { makeThemedStyles, useAppTheme } from '@/components/theme-provider'
 import { Icon } from '@/design/icons'
 import { Object3D } from '@/design/objects'
 import { AssetLogo } from '@/features/trade/asset-logo'
-import { PurchaseSheet } from '@/features/trade/purchase-sheet'
+import { PortfolioCard } from '@/features/portfolio/portfolio-card'
 import { useWalletLink } from '@/features/trade/use-wallet-link'
 import { useInvestableAssets, type InvestableAsset } from '@/features/trade/trade-api'
 import { useNetwork } from '@/features/network/use-network'
@@ -123,14 +123,18 @@ export default function InvestScreen() {
   const catalog = useInvestableAssets()
   const network = useNetwork()
   const router = useRouter()
+  // An asset opens its own page — price, chart, then a Buy button — rather than dropping
+  // straight into the buy sheet, so looking and buying are no longer the same step.
+  const openAsset = (asset: ShelfAsset) => router.push({ pathname: '/asset/[mint]', params: { mint: asset.mint } })
 
-  const [selected, setSelected] = useState<ShelfAsset | null>(null)
   const [risksOpen, setRisksOpen] = useState(false)
 
   // The catalogue supplies mints, availability, fees and artwork; the shelf keeps its own
   // framing (`name`, `kind`, `tone`) so a raw ticker never replaces the plain-language label.
   const assets = SHELF.map((asset) => {
-    const live = catalog.data?.assets.find((entry) => entry.symbol === asset.symbol)
+    // `assets` is guarded as well as `data`: a response that arrives without it — which
+    // apiRequest used to hand back as an empty success — blanked the entire screen.
+    const live = catalog.data?.assets?.find((entry) => entry.symbol === asset.symbol)
     return { ...asset, ...(live ?? {}), name: asset.name, kind: asset.kind, tone: asset.tone, shelf: asset.shelf }
   })
 
@@ -138,6 +142,10 @@ export default function InvestScreen() {
     <>
       <Screen>
         <AppHeader eyebrow="The shelf" title="Invest calmly" />
+
+        {/* ── What it is worth and how it has done, first. It used to be a row two-thirds
+            of the way down; the number someone opens this screen for should not need finding. ── */}
+        <PortfolioCard />
 
         {/* ── Wallet state, as a single row. ── */}
         <PressableCard
@@ -159,28 +167,11 @@ export default function InvestScreen() {
           {linked ? <Icon name="checkCircle" size={22} color={colors.kiwiDeep} /> : <Chip label="Required" />}
         </PressableCard>
 
-        <PressableCard
-          accessibilityLabel="View your portfolio"
-          onPress={() => router.push('/portfolio')}
-          style={styles.wallet}
-        >
-          <Object3D name="chartUp" size={44} />
-          <View style={styles.walletCopy}>
-            <T role="label" color={colors.ink}>
-              Your portfolio
-            </T>
-            <T role="caption" color={colors.inkFaint}>
-              Holdings and returns — private to you
-            </T>
-          </View>
-          <Icon name="chevronRight" size={18} color={colors.inkFaint} />
-        </PressableCard>
-
         <Shelf
           title="Public markets"
           badge="xStocks"
           assets={assets.filter((asset) => asset.shelf === 'public')}
-          onSelect={setSelected}
+          onSelect={openAsset}
           onSeeAll={() => router.push('/markets')}
         />
 
@@ -188,7 +179,7 @@ export default function InvestScreen() {
           title="Private markets"
           badge="Tessera"
           assets={assets.filter((asset) => asset.shelf === 'private')}
-          onSelect={setSelected}
+          onSelect={openAsset}
         />
 
         <PressableCard
@@ -221,8 +212,6 @@ export default function InvestScreen() {
           <Icon name="chevronRight" size={18} color={colors.inkFaint} />
         </PressableCard>
       </Screen>
-
-      <PurchaseSheet asset={selected} onClose={() => setSelected(null)} />
 
       {/* ── Risks ── */}
       <Sheet

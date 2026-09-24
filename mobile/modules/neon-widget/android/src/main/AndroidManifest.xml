@@ -3,7 +3,7 @@
     <receiver
       android:name=".NeonReserveWidgetProvider"
       android:exported="true"
-      android:label="Neon Reserve">
+      android:label="@string/kept_widget_label">
       <intent-filter>
         <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
       </intent-filter>

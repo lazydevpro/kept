@@ -25,12 +25,20 @@ export interface WidgetSnapshot {
   }
 }
 
+/** Exactly what the widget draws. Everything else in the snapshot stays on the JS side. */
+type WidgetPayload = Pick<WidgetSnapshot, 'title' | 'message' | 'rings'>
+
 interface NeonWidgetNativeModule {
-  updateProgress(snapshot: WidgetSnapshot): Promise<void>
+  updateProgress(snapshot: WidgetPayload): Promise<void>
 }
 
 const nativeModule = Platform.OS === 'android' ? requireNativeModule<NeonWidgetNativeModule>('NeonWidget') : null
 
 export function updateNeonWidget(snapshot: WidgetSnapshot) {
-  return nativeModule?.updateProgress(snapshot) ?? Promise.resolve()
+  if (!nativeModule) return Promise.resolve()
+  // Send only the drawn fields. `summary.latest` is null until someone has invested, and a
+  // nested null fails the Kotlin conversion, which threw the whole update away — so the
+  // widget never updated for anyone who had not yet contributed.
+  const { title, message, rings } = snapshot
+  return nativeModule.updateProgress({ title, message, rings })
 }

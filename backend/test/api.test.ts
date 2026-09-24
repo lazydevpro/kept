@@ -377,6 +377,48 @@ describe("Neon Reserve API", () => {
     expect(response.status).toBe(401);
   });
 
+  it("verifies the signed payload a real mobile wallet returns", async () => {
+    const signIn = await SELF.fetch(
+      "https://local.test/api/auth/sign-in/anonymous",
+      {
+        method: "POST",
+        headers: { "content-type": "application/json", origin: "neonreserve://" },
+        body: "{}",
+      },
+    );
+    const cookie = signIn.headers.get("set-cookie") ?? "";
+    const privateKey = ed25519.utils.randomSecretKey();
+    const walletAddress = bs58.encode(ed25519.getPublicKey(privateKey));
+    const challenge = await SELF.fetch("https://local.test/v1/wallets/challenge", {
+      method: "POST",
+      headers: { cookie, "content-type": "application/json" },
+      body: JSON.stringify({ address: walletAddress }),
+    });
+    const challengePayload = (await challenge.json()) as { challengeId: string; message: string };
+
+    // Mobile Wallet Adapter returns the SIGNED PAYLOAD — the message with the signature
+    // appended — base64 encoded, which runs to ~376 characters. The bare base58 signature
+    // the test above sends is a shape no wallet produces, which is how a 256-character cap
+    // on this field survived: it rejected every real wallet with a 422 before the
+    // signature was ever checked.
+    const message = new TextEncoder().encode(challengePayload.message);
+    const signedPayload = new Uint8Array(message.length + 64);
+    signedPayload.set(message);
+    signedPayload.set(ed25519.sign(message, privateKey), message.length);
+    const signature = btoa(String.fromCharCode(...signedPayload));
+    expect(signature.length).toBeGreaterThan(256);
+
+    const verify = await SELF.fetch("https://local.test/v1/wallets/verify", {
+      method: "POST",
+      headers: { cookie, "content-type": "application/json" },
+      body: JSON.stringify({ challengeId: challengePayload.challengeId, signature }),
+    });
+    expect(verify.status).toBe(201);
+    expect(await verify.json()).toMatchObject({
+      wallet: { address: walletAddress, verified: true },
+    });
+  });
+
   it("requires a wallet-linked user to acknowledge Tessera's private-market risks", async () => {
     const signIn = await SELF.fetch(
       "https://local.test/api/auth/sign-in/anonymous",
