@@ -382,19 +382,28 @@ describe("Neon Reserve API", () => {
       "https://local.test/api/auth/sign-in/anonymous",
       {
         method: "POST",
-        headers: { "content-type": "application/json", origin: "neonreserve://" },
+        headers: {
+          "content-type": "application/json",
+          origin: "neonreserve://",
+        },
         body: "{}",
       },
     );
     const cookie = signIn.headers.get("set-cookie") ?? "";
     const privateKey = ed25519.utils.randomSecretKey();
     const walletAddress = bs58.encode(ed25519.getPublicKey(privateKey));
-    const challenge = await SELF.fetch("https://local.test/v1/wallets/challenge", {
-      method: "POST",
-      headers: { cookie, "content-type": "application/json" },
-      body: JSON.stringify({ address: walletAddress }),
-    });
-    const challengePayload = (await challenge.json()) as { challengeId: string; message: string };
+    const challenge = await SELF.fetch(
+      "https://local.test/v1/wallets/challenge",
+      {
+        method: "POST",
+        headers: { cookie, "content-type": "application/json" },
+        body: JSON.stringify({ address: walletAddress }),
+      },
+    );
+    const challengePayload = (await challenge.json()) as {
+      challengeId: string;
+      message: string;
+    };
 
     // Mobile Wallet Adapter returns the SIGNED PAYLOAD — the message with the signature
     // appended — base64 encoded, which runs to ~376 characters. The bare base58 signature
@@ -411,7 +420,10 @@ describe("Neon Reserve API", () => {
     const verify = await SELF.fetch("https://local.test/v1/wallets/verify", {
       method: "POST",
       headers: { cookie, "content-type": "application/json" },
-      body: JSON.stringify({ challengeId: challengePayload.challengeId, signature }),
+      body: JSON.stringify({
+        challengeId: challengePayload.challengeId,
+        signature,
+      }),
     });
     expect(verify.status).toBe(201);
     expect(await verify.json()).toMatchObject({
@@ -847,7 +859,12 @@ describe("Launch readiness", () => {
   };
 
   /** A wallet, and a signed challenge from it for whichever session asks. */
-  const wallet = () => {
+  /**
+   * `bare` is a base58 64-byte signature. `mwa` is what Mobile Wallet Adapter really
+   * returns: the message with the signature appended, base64, ~376 characters — sent
+   * unpadded, which is the shape that used to be mistaken for base58.
+   */
+  const wallet = (shape: "bare" | "mwa" = "bare") => {
     const privateKey = ed25519.utils.randomSecretKey();
     const address = bs58.encode(ed25519.getPublicKey(privateKey));
     const signFor = async (cookie: string) => {
@@ -859,13 +876,42 @@ describe("Launch readiness", () => {
         challengeId: string;
         message: string;
       };
-      const signature = bs58.encode(
-        ed25519.sign(new TextEncoder().encode(message), privateKey),
+      const bytes = new TextEncoder().encode(message);
+      const raw = ed25519.sign(bytes, privateKey);
+      if (shape === "bare") return { challengeId, signature: bs58.encode(raw) };
+      const payload = new Uint8Array(bytes.length + 64);
+      payload.set(bytes);
+      payload.set(raw, bytes.length);
+      const signature = btoa(String.fromCharCode(...payload)).replaceAll(
+        "=",
+        "",
       );
       return { challengeId, signature };
     };
     return { address, signFor };
   };
+
+  it("restores an account from the signed payload a real wallet returns", async () => {
+    const original = await signIn();
+    const w = wallet("mwa");
+    const first = await w.signFor(original);
+    expect(first.signature.length).toBeGreaterThan(256);
+    const linked = await call(original, "/v1/wallets/verify", {
+      method: "POST",
+      body: JSON.stringify(first),
+    });
+    expect(linked.status).toBe(201);
+    const originalId = (await whoAmI(original))!.profile.id;
+
+    const fresh = await signIn();
+    const restored = await call(fresh, "/api/auth/sign-in/wallet", {
+      method: "POST",
+      body: JSON.stringify(await w.signFor(fresh)),
+    });
+    expect(restored.status).toBe(200);
+    const me = await whoAmI(restored.headers.get("set-cookie") ?? "");
+    expect(me?.profile.id).toBe(originalId);
+  });
 
   it("restores an account on a new device from its linked wallet", async () => {
     const original = await signIn();

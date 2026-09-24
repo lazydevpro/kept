@@ -17,20 +17,39 @@ export function walletSigned(
   message: string,
   signature: string,
 ): boolean {
+  let bytes: Uint8Array;
+  let publicKey: Uint8Array;
   try {
-    const signedPayload = signature.includes("=")
-      ? Uint8Array.from(atob(signature), (character) => character.charCodeAt(0))
-      : bs58.decode(signature);
-    const bytes = new TextEncoder().encode(message);
-    const publicKey = bs58.decode(address);
-    const candidates =
-      signedPayload.length === 64
-        ? [signedPayload]
-        : [signedPayload.slice(0, 64), signedPayload.slice(-64)];
-    return candidates.some((candidate) =>
-      ed25519.verify(candidate, bytes, publicKey),
-    );
+    bytes = new TextEncoder().encode(message);
+    publicKey = bs58.decode(address);
   } catch {
     return false;
   }
+  // Base64 only carries "=" when the byte length is not a multiple of three, so
+  // choosing the encoding by looking for padding sent unpadded base64 down the
+  // base58 path. Decode both ways and let the signature check decide.
+  const decoded = [
+    () =>
+      Uint8Array.from(atob(signature), (character) => character.charCodeAt(0)),
+    () => bs58.decode(signature),
+  ].flatMap((decode) => {
+    try {
+      return [decode()];
+    } catch {
+      return [];
+    }
+  });
+  return decoded
+    .flatMap((payload) =>
+      payload.length === 64
+        ? [payload]
+        : [payload.slice(0, 64), payload.slice(-64)],
+    )
+    .some((candidate) => {
+      try {
+        return ed25519.verify(candidate, bytes, publicKey);
+      } catch {
+        return false;
+      }
+    });
 }

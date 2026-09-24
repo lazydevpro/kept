@@ -46,7 +46,8 @@ export function walletSignIn(db: D1Database) {
           method: "POST",
           body: z.object({
             challengeId: z.string().min(8).max(80),
-            signature: z.string().min(40).max(256),
+            // A Mobile Wallet Adapter signed payload is ~376 characters of base64.
+            signature: z.string().min(40).max(2048),
           }),
           use: [sessionMiddleware],
         },

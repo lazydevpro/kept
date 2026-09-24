@@ -93,6 +93,7 @@ for (const path of [
   "/v1/trades/sell-quote",
   "/v1/trades/asset",
   "/v1/trades/catalog",
+  "/v1/trades/chart",
 ]) {
   app.use(path, rateLimit("quote", byUser));
 }
