@@ -1,8 +1,12 @@
 # KEPT — launch films
 
 Scripts and storyboards for the consumer launch. Four pieces: a teaser, the hero film, a
-product film, and cutdowns. Everything on screen is listed in §6 so copy can be approved in
-one pass.
+product film, and cutdowns — plus a 60-second announcement film for the beta, planned shot by
+shot in [announcement-film.md](announcement-film.md). Everything on screen, including that
+film's, is listed in §6 so copy can be approved in one pass.
+
+The launch video that was actually made is none of these: **"Next week"**, a motion-graphics
+film built in `video/` — see [product-video.md](product-video.md).
 
 Brand reference: [docs/design/kept-design-system.md](design/kept-design-system.md). Voice is
 warm, plain, short. Never celebrate portfolio size; only celebrate showing up.
@@ -207,6 +211,33 @@ KEPT — Promises compound.
 
 Every figure above comes from `web/lib/year.ts` and reconciles: three missed weeks (6, 19, 26),
 49 kept at $20, $980 against a $1,000 goal. Change the data and change these.
+
+**Announcement film** ([announcement-film.md](announcement-film.md))
+
+```
+A little
+every week
+with people
+who notice.
+They see that you kept it.
+Never how much.
+Your circle finds out.
+Kept this week's promise
+A nudge from your circle
+Twelve awards.
+None of them for being rich.
+WEEK 19
+Some weeks, you won't.
+WEEK 20
+every week · every week · every week
+Promises
+compound.
+KEPT
+Promises compound.
+Android beta now · Solana dApp Store soon
+```
+
+No money figures. Week 19 is one of the year's three real misses, and week 20 was kept.
 
 ---
 

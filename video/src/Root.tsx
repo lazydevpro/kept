@@ -1,7 +1,9 @@
 import React from 'react'
 import { Composition } from 'remotion'
 import { Launch } from './Launch'
-import { FPS, TOTAL_FRAMES } from './edit'
+import { FPS as TROOP_FPS, TOTAL_FRAMES } from './edit'
+import { NextWeek, calculateNextWeekMetadata, type NextWeekProps } from './next-week/NextWeek'
+import { FPS, TRACKS, filmFrames } from './next-week/tracks'
 import { CUTDOWN, SCENES, layout } from './product/film'
 import {
   ProductFilm,
@@ -18,7 +20,7 @@ import {
  * sliced. Both films derive their type scale from `width`, which is what makes that work.
  */
 export function RemotionRoot() {
-  const troop = { component: Launch, durationInFrames: TOTAL_FRAMES, fps: FPS } as const
+  const troop = { component: Launch, durationInFrames: TOTAL_FRAMES, fps: TROOP_FPS } as const
 
   const full = layout(SCENES).total
   const short = layout(SCENES.filter((s) => CUTDOWN.includes(s.id))).total
@@ -32,6 +34,21 @@ export function RemotionRoot() {
 
   return (
     <>
+      {/* "Next week" — the product video. One composition per track, for comparing scores. */}
+      {TRACKS.map((track) => (
+        <Composition
+          key={track.id}
+          id={track.id === 'score' ? 'NextWeek' : `NextWeek-${track.id}`}
+          component={NextWeek}
+          fps={FPS}
+          width={1920}
+          height={1080}
+          durationInFrames={filmFrames(track.bpm)}
+          defaultProps={{ track: track.id } satisfies NextWeekProps}
+          calculateMetadata={calculateNextWeekMetadata}
+        />
+      ))}
+
       {/* The generated-footage piece — social, marketing. */}
       <Composition id="Launch" {...troop} width={1920} height={1080} />
       <Composition id="LaunchVertical" {...troop} width={1080} height={1920} />

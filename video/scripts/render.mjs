@@ -12,6 +12,10 @@ import { spawnSync } from 'node:child_process'
 import { mkdirSync } from 'node:fs'
 
 const CUTS = [
+  // "Next week" — the product video. Needs `npm run score` first for its audio.
+  { id: 'NextWeek', out: 'out/kept-next-week-16x9.mp4' },
+  // The same film on NastelBom – Product. Needs the MP3 in public/next-week/music/ (see tracks.ts).
+  { id: 'NextWeek-product', out: 'out/kept-next-week-16x9-product.mp4' },
   // The generated-footage piece.
   { id: 'Launch', out: 'out/kept-troop-16x9.mp4' },
   { id: 'LaunchVertical', out: 'out/kept-troop-9x16.mp4' },
