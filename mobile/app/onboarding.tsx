@@ -37,6 +37,7 @@ import {
   defaultOnboardingDraft,
   type GoalChoice,
   loadOnboardingDraft,
+  ONBOARDING_LAST_STEP,
   type OnboardingDraft,
   saveOnboardingDraft,
   syncOnboardingDraft,
@@ -84,8 +85,8 @@ const REASONS: {
   },
 ]
 
-const STEP_LABELS = ['Welcome', 'Your why', 'Your rhythm', 'Try it', 'Your circle', 'Ready']
-const LAST_STEP = 5
+const STEP_LABELS = ['Welcome', 'Your why', 'Your rhythm', 'Try it', 'Your name', 'Your circle', 'Ready']
+const LAST_STEP = ONBOARDING_LAST_STEP
 
 export default function OnboardingScreen() {
   const { colors } = useAppTheme()
@@ -119,6 +120,8 @@ export default function OnboardingScreen() {
           ? { promise: 1, goal: 0.56, circle: 0.02 }
           : { promise: 0.74, goal: 0.42, circle: 0.02 }
       case 4:
+        return { promise: 1, goal: 0.7, circle: 0.02 }
+      case 5:
         return { promise: 1, goal: 0.82, circle: draft.inviteAfterSetup ? 0.6 : 0.1 }
       default:
         return { promise: 1, goal: 1, circle: draft.inviteAfterSetup ? 1 : 0.2 }
@@ -297,7 +300,7 @@ export default function OnboardingScreen() {
                 },
               ]}
             />
-            <Rings size={ringSize} {...rings} label={`Setup progress, step ${draft.step + 1} of 6`}>
+            <Rings size={ringSize} {...rings} label={`Setup progress, step ${draft.step + 1} of ${STEP_LABELS.length}`}>
               <Object3D
                 name={draft.step === LAST_STEP ? 'party' : draft.previewCompleted ? 'check' : 'seedling'}
                 size={ringSize * 0.17}
@@ -343,10 +346,18 @@ export default function OnboardingScreen() {
             ) : null}
 
             {draft.step === 4 ? (
+              <NameStep
+                colors={colors}
+                name={draft.displayName}
+                onName={(displayName) => update({ displayName })}
+                onNext={() => goTo(5)}
+              />
+            ) : null}
+
+            {draft.step === 5 ? (
               <CircleStep
                 colors={colors}
                 draft={draft}
-                onName={(displayName) => update({ displayName })}
                 onSelect={(invite) => {
                   select({ inviteAfterSetup: invite })
                   setTimeout(() => goTo(LAST_STEP), 280)
@@ -581,16 +592,69 @@ function TryIt({ draft, onPreview, onNext }: { draft: OnboardingDraft; onPreview
   )
 }
 
+/**
+ * Asked on its own, not tucked above the circle choice. As an optional field on that step
+ * it was skipped without being seen — tapping a choice moves on — so people arrived in a
+ * circle as "Member 4F2A". Still skippable: a name is how friends see you, not a gate.
+ */
+function NameStep({
+  colors,
+  name,
+  onName,
+  onNext,
+}: {
+  colors: ThemeColors
+  name: string
+  onName: (name: string) => void
+  onNext: () => void
+}) {
+  const styles = useStyles()
+  const named = name.trim().length >= 2
+  return (
+    <View style={styles.step}>
+      <T role="title" center>
+        What should your circle call you?
+      </T>
+      <T role="body" center>
+        It’s the name on your nudges and cheers. You can change it any time in Account.
+      </T>
+      <TextInput
+        value={name}
+        onChangeText={(value) => onName(value.slice(0, 40))}
+        placeholder="Your first name"
+        placeholderTextColor={colors.inkMuted}
+        autoCapitalize="words"
+        autoComplete="given-name"
+        autoFocus
+        maxLength={40}
+        returnKeyType="next"
+        onSubmitEditing={() => (named ? onNext() : undefined)}
+        accessibilityLabel="Your name, as your circle sees it"
+        style={[type.body, styles.nameField, { color: colors.ink, backgroundColor: colors.surface }]}
+      />
+      <Button label="Continue" icon="arrowRight" onPress={onNext} disabled={!named} style={styles.cta} />
+      <Pressable
+        accessibilityRole="button"
+        onPress={onNext}
+        hitSlop={8}
+        style={({ pressed }) => [styles.later, pressed && motion.pressed]}
+      >
+        <T role="label" center color={colors.inkFaint}>
+          Skip for now
+        </T>
+      </Pressable>
+    </View>
+  )
+}
+
 function CircleStep({
   colors,
   draft,
   onSelect,
-  onName,
 }: {
   colors: ThemeColors
   draft: OnboardingDraft
   onSelect: (invite: boolean) => void
-  onName: (name: string) => void
 }) {
   const styles = useStyles()
   const options: { invite: boolean; icon: IconName; title: string; detail: string }[] = [
@@ -602,20 +666,6 @@ function CircleStep({
       <T role="title" center>
         Better with someone.
       </T>
-      {/* Without this every account was called "Anonymous" — a circle of four people all
-          named the same, and nudges from "Anonymous". Optional: skipped, it is "Member" and
-          four characters, and it can be changed in Account. */}
-      <TextInput
-        value={draft.displayName}
-        onChangeText={(value) => onName(value.slice(0, 40))}
-        placeholder="What should friends call you?"
-        placeholderTextColor={colors.inkMuted}
-        autoCapitalize="words"
-        autoComplete="name"
-        maxLength={40}
-        accessibilityLabel="Your name, as your circle sees it"
-        style={[type.body, styles.nameField, { color: colors.ink, backgroundColor: colors.surface }]}
-      />
       <View style={styles.optionList} accessibilityRole="radiogroup">
         {options.map((option) => {
           const selected = draft.inviteAfterSetup === option.invite
@@ -768,6 +818,7 @@ const useStyles = makeThemedStyles((colors) =>
     stepFill: { flex: 1 },
     grow: { flex: 1, minHeight: space[4] },
     cta: { alignSelf: 'stretch', marginTop: space[1] },
+    later: { alignSelf: 'center', paddingVertical: space[2] },
 
     reasonGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: space[3] },
     reason: {

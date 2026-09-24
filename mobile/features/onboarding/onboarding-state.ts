@@ -70,10 +70,13 @@ export async function markOnboardingComplete() {
   await AsyncStorage.setItem(COMPLETE_KEY, 'true')
 }
 
+/** Welcome, why, rhythm, try it, name, circle, ready. */
+export const ONBOARDING_LAST_STEP = 6
+
 export async function completeOnboarding(draft: OnboardingDraft) {
   await Promise.all([
     AsyncStorage.setItem(COMPLETE_KEY, 'true'),
-    AsyncStorage.setItem(DRAFT_KEY, JSON.stringify({ ...draft, step: 5 })),
+    AsyncStorage.setItem(DRAFT_KEY, JSON.stringify({ ...draft, step: ONBOARDING_LAST_STEP })),
   ])
 }
 
