@@ -293,37 +293,6 @@ room — a reaction posted over HTTP arrives on the socket as `reaction.added`.
       forbid and drop. The shim is now in-memory so a token cannot be left behind even if
       that changes upstream; verified the session survives a full reload #security
 
-## Next — the product film #marketing
-
-Planned: [docs/product-film.md](docs/product-film.md). ~52s, pure motion graphics, no footage.
-Builds in the existing `video/` workspace as a second composition set. The centre of it is
-scene 3 — week 6, the promise ring resetting while the money does not — which is the one
-mechanic no amount of copy lands.
-
-- [ ] Build `src/product/`, eight scene components plus a `RingWipe` transition and a
-      `Counter`. Reuses `Rings`, `year.ts`, `prices.ts` and the token file unchanged #marketing
-- [ ] Fetch prices at render time via `delayRender` + `calculateMetadata`, so every render
-      carries that day's real market data and the chip can honestly read `Live · <date>`
-      #marketing #web
-- [ ] Cut a 30s version — scenes 1, 3, 5, 8. Scene 3 survives every cut #marketing
-
-## Next — launch films #marketing
-
-Scripts and storyboards written: [docs/launch-film.md](docs/launch-film.md). Four pieces —
-teaser, 90s hero film, 60s product film, cutdowns. Three rules govern all of them: no numbers,
-no screens until the last five seconds, and the three missed weeks stay in.
-
-- [ ] Approve the on-screen copy (§6 of the doc — every word in one place) #marketing
-- [ ] Find a director and a composer. The score is the commission that matters: the whole
-      arrangement is fifty-two recordings of one ceramic cup on a wooden table, one pitch per
-      cast member. If that gets value-engineered away the film loses the thing people would
-      remember #marketing
-- [ ] Decide whether the app's confirmation sound becomes the film's cup sound — they should
-      be the same recording, not merely similar #marketing #design
-- [ ] Product film can be rendered rather than shot: `web/components/rings.tsx` and
-      `web/lib/year.ts` already hold the real geometry and the 52-week dataset, so a Remotion
-      build would be the product rather than a mockup of it #marketing #web
-
 ## Next — the landing page #web
 
 Spec agreed: [docs/plans/landing-page.md](docs/plans/landing-page.md). Concept is **scroll is
@@ -485,13 +454,3 @@ time** — scrolling the page lives a year of the habit. Reference the user brou
       web, so they need the same device pass everything else is waiting on #verify
 - [ ] Still silent. The cup score in `docs/launch-film.md` §2 is the sound this moment wants,
       and the app's confirmation tone should be the same recording as the film's #design
-
-## Next
-
-- [ ] Integrate PreStocks, or decide not to — see
-      [docs/private-markets.md](docs/private-markets.md). Eight more pre-IPO names and the
-      larger bounty, but its mints carry a live `scaledUiAmountConfig` multiplier (1.4861347
-      since 17 Jul 2026) that would make our quantity, cost basis and P&L wrong by a third;
-      a 1% transfer fee the issuer has already doubled once; and `permanentDelegate`,
-      `freezeAuthority` and `pausableConfig` all on one issuer key, which the
-      "self-custodial" wallet copy would have to be honest about #markets
